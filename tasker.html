@@ -11,52 +11,34 @@
     />
     <script id="app-state" type="application/json">
       {
-        "writing": false,
         "tasks": [],
         "agents": [
           {
             "id": "agent-researcher-default",
             "name": "Researcher",
             "role": "You are a research agent. Your job is to find information, audit codebases, summarize findings, and answer questions with cited sources. Be thorough and precise. Prefer facts over speculation.",
-            "default_model_id": null,
-            "default_temperature": 0.3,
             "color": "#3b82f6"
           },
           {
             "id": "agent-coder-default",
             "name": "Coder",
             "role": "You are a coding agent. Your job is to write, edit, debug, and explain code. Produce clean, working code with no unnecessary comments. Follow the existing conventions in the codebase.",
-            "default_model_id": null,
-            "default_temperature": 0.2,
             "color": "#10b981"
           },
           {
             "id": "agent-reviewer-default",
             "name": "Reviewer",
             "role": "You are a review agent. Your job is to review output from other agents, flag issues, identify improvements, and provide actionable feedback. Be direct and specific.",
-            "default_model_id": null,
-            "default_temperature": 0.4,
             "color": "#f59e0b"
           },
           {
             "id": "agent-writer-default",
             "name": "Writer",
             "role": "You are a writing agent. Your job is to write documentation, copy, summaries, and prose. Match the existing tone and style. Be clear and concise.",
-            "default_model_id": null,
-            "default_temperature": 0.6,
             "color": "#8b5cf6"
           }
         ],
-        "models": [
-          {
-            "id": "model-claude-sonnet-default",
-            "name": "Claude Sonnet",
-            "provider": "anthropic",
-            "endpoint": "https://api.anthropic.com/v1/messages",
-            "api_key": "",
-            "model_string": "claude-sonnet-4-6"
-          }
-        ],
+        "models": [],
         "logs": []
       }
     </script>
@@ -224,57 +206,24 @@
         white-space: nowrap;
       }
 
-      #watcher-status.disconnected {
+      #watcher-status.disconnected,
+      #watcher-status.paused {
         cursor: default;
         opacity: 0.5;
       }
 
-      #watcher-status.disconnected .toggle-switch {
-        display: none;
+      #btn-pause {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px 6px;
+        color: var(--text-tertiary);
+        transition: color 0.15s;
+        line-height: 1;
       }
 
-      .toggle-switch {
-        width: 32px;
-        height: 17px;
-        border-radius: 9px;
-        background: var(--toggle-bg);
-        border: 1px solid var(--toggle-border);
-        position: relative;
-        flex-shrink: 0;
-        transition: background 0.2s, border-color 0.2s;
-      }
-
-      .toggle-knob {
-        position: absolute;
-        top: 2px;
-        left: 2px;
-        width: 11px;
-        height: 11px;
-        border-radius: 50%;
-        background: var(--danger);
-        transition: transform 0.2s, background 0.2s;
-      }
-
-      #watcher-status.connected .toggle-switch {
-        background: rgba(16, 185, 129, 0.15);
-        border-color: var(--success);
-      }
-      #watcher-status.connected .toggle-knob {
-        transform: translateX(15px);
-        background: var(--success);
-      }
-
-      #watcher-status.paused .toggle-switch {
-        background: rgba(245, 158, 11, 0.1);
-        border-color: var(--warning);
-      }
-      #watcher-status.paused .toggle-knob {
-        background: var(--warning);
-      }
-
-      #watcher-status.connected:hover .toggle-switch,
-      #watcher-status.paused:hover .toggle-switch {
-        filter: brightness(1.2);
+      #btn-pause:hover {
+        color: var(--warning);
       }
 
       #btn-settings {
@@ -608,15 +557,6 @@
         overflow: hidden;
         margin-bottom: 10px;
         line-height: 1.5;
-      }
-
-      .agent-meta-row {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-bottom: 12px;
-        font-size: 11px;
-        color: var(--text-secondary);
       }
 
       .agent-card-actions {
@@ -1107,40 +1047,6 @@
         margin-bottom: 16px;
       }
 
-      .model-row {
-        background: var(--bg-subtle);
-        border: 1px solid var(--border);
-        padding: 14px;
-        margin-bottom: 10px;
-        position: relative;
-      }
-
-      .model-row-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 10px;
-      }
-
-      .model-row-name {
-        font-size: 13px;
-        font-weight: 500;
-      }
-
-      .model-fields {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-      }
-
-      .model-fields .form-group {
-        margin-bottom: 0;
-      }
-
-      .model-fields .form-group.full-width {
-        grid-column: 1 / -1;
-      }
-
       .color-presets {
         display: flex;
         gap: 8px;
@@ -1234,11 +1140,10 @@
           </button>
         </div>
         <div id="topbar-right">
-          <span id="scan-countdown"></span>
-          <div id="watcher-status" class="disconnected" onclick="toggleTasker()">
+          <div id="watcher-status" class="disconnected">
             <span id="watcher-label">Offline — run: /tasker</span>
-            <div class="toggle-switch"><div class="toggle-knob"></div></div>
           </div>
+          <button id="btn-pause" type="button" onclick="pauseTasker()" title="Pause scan loop" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="4" x2="7" y2="21"/><line x1="17" y1="4" x2="17" y2="21"/></svg></button>
           <button id="btn-stop" onclick="stopTasker()" title="Stop Tasker" style="display:none;background:none;border:none;cursor:pointer;padding:4px 6px;color:var(--text-tertiary);transition:color 0.15s;line-height:1;" onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--text-tertiary)'"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg></button>
           <button id="btn-settings" onclick="openSettings()" title="Settings">
             ⚙
@@ -1341,36 +1246,42 @@
               <div class="color-presets">
                 <div
                   class="color-preset"
+                  data-color="#3b82f6"
                   style="background: #3b82f6"
                   onclick="setAgentColor('#3b82f6')"
                   title="Blue"
                 ></div>
                 <div
                   class="color-preset"
+                  data-color="#10b981"
                   style="background: #10b981"
                   onclick="setAgentColor('#10b981')"
                   title="Green"
                 ></div>
                 <div
                   class="color-preset"
+                  data-color="#f59e0b"
                   style="background: #f59e0b"
                   onclick="setAgentColor('#f59e0b')"
                   title="Amber"
                 ></div>
                 <div
                   class="color-preset"
+                  data-color="#8b5cf6"
                   style="background: #8b5cf6"
                   onclick="setAgentColor('#8b5cf6')"
                   title="Purple"
                 ></div>
                 <div
                   class="color-preset"
+                  data-color="#ef4444"
                   style="background: #ef4444"
                   onclick="setAgentColor('#ef4444')"
                   title="Red"
                 ></div>
                 <div
                   class="color-preset"
+                  data-color="#5865f2"
                   style="background: #5865f2"
                   onclick="setAgentColor('#5865f2')"
                   title="Indigo"
@@ -1542,16 +1453,11 @@
       // WATCHER CONNECTION (SSE)
       // ─────────────────────────────────────────────────────────────────
 
-      function toggleTasker() {
+      function pauseTasker() {
         const el = document.getElementById("watcher-status");
-        if (el.classList.contains("connected")) {
-          fetch(`${WATCHER_URL}/pause`, { method: "POST" }).catch(() => {});
-          setWatcherStatus("paused", "Paused");
-        } else if (el.classList.contains("paused")) {
-          fetch(`${WATCHER_URL}/resume`, { method: "POST" }).catch(() => {});
-          setWatcherStatus("connected", "Running");
-        }
-        // disconnected = process not running, toggle does nothing
+        if (!el.classList.contains("connected")) return;
+        fetch(`${WATCHER_URL}/pause`, { method: "POST" }).catch(() => {});
+        setWatcherStatus("paused", "Paused — run: /tasker-scan");
       }
 
       function connectWatcher() {
@@ -1589,8 +1495,6 @@
       function startCountdown(seconds) {
         stopCountdown();
         countdownSeconds = seconds;
-        const el = document.getElementById("scan-countdown");
-        if (el) el.style.display = "flex";
         updateCountdownDisplay();
         countdownTimer = setInterval(() => {
           countdownSeconds--;
@@ -1604,25 +1508,30 @@
 
       function stopCountdown() {
         if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
-        const el = document.getElementById("scan-countdown");
-        if (el) el.style.display = "none";
+        const status = document.getElementById("watcher-status");
+        const lbl = document.getElementById("watcher-label");
+        if (lbl && status && status.classList.contains("connected")) {
+          lbl.textContent = "Scanning...";
+        }
       }
 
       function updateCountdownDisplay() {
-        const el = document.getElementById("scan-countdown");
-        if (!el) return;
+        const lbl = document.getElementById("watcher-label");
+        if (!lbl) return;
         const m = Math.floor(countdownSeconds / 60);
         const s = countdownSeconds % 60;
-        el.textContent = `Next scan in ${m}:${String(s).padStart(2, "0")}`;
+        lbl.textContent = `Next scan in ${m}:${String(s).padStart(2, "0")}`;
       }
 
       function setWatcherStatus(cls, label) {
         const el = document.getElementById("watcher-status");
         const lbl = document.getElementById("watcher-label");
         const stop = document.getElementById("btn-stop");
+        const pause = document.getElementById("btn-pause");
         if (el) el.className = cls;
         if (lbl) lbl.textContent = label;
         if (stop) stop.style.display = cls === "disconnected" ? "none" : "inline-flex";
+        if (pause) pause.style.display = cls === "connected" ? "inline-flex" : "none";
         if (cls !== "connected") stopCountdown();
       }
 
@@ -1641,10 +1550,11 @@
             persistState(); // bootstrap tasks.json on first run
           }
           if (ev.paused) {
-            setWatcherStatus("paused", "Paused");
+            setWatcherStatus("paused", "Paused — run: /tasker-scan");
           } else {
             setWatcherStatus("connected", "Running");
-            startCountdown(60);
+            const elapsed = ev.lastHeartbeat ? Math.floor((Date.now() - ev.lastHeartbeat) / 1000) : 0;
+            startCountdown(Math.max(1, 30 - elapsed));
           }
           return;
         }
@@ -1654,15 +1564,15 @@
         }
         if (ev.type === "tasker_state") {
           if (ev.paused) {
-            setWatcherStatus("paused", "Paused");
+            setWatcherStatus("paused", "Paused — run: /tasker-scan");
           } else {
             setWatcherStatus("connected", "Running");
-            startCountdown(60);
+            startCountdown(30);
           }
           return;
         }
         if (ev.type === "scan_heartbeat") {
-          startCountdown(60);
+          startCountdown(30);
           return;
         }
         if (ev.type === "shutdown") {
@@ -1986,7 +1896,7 @@
         task.activity = task.activity || [];
         task.activity.push({
           timestamp: new Date().toISOString(),
-          type: "moved",
+          type: "updated",
           content: "Task updated",
         });
         persistState();
@@ -2054,12 +1964,12 @@
 
         return `
           <div class="activity-section">
-            <div class="activity-title">Activity &amp; Chat</div>
+            <div class="activity-title">Activity &amp; Comments</div>
             <div class="chat-messages" id="chat-messages-${task.id}">
               ${msgs || '<div style="color:var(--text-tertiary);font-size:11px;font-family:var(--font-mono);padding:6px 0">No activity yet.</div>'}
             </div>
             <div class="chat-input-row">
-              <textarea class="chat-input" id="chat-input-${task.id}" placeholder="Message the agent…" rows="1"
+              <textarea class="chat-input" id="chat-input-${task.id}" placeholder="Add a comment for the agent…" rows="1"
                 onkeydown="handleChatKeydown(event,'${task.id}')"></textarea>
               <button class="btn-send" id="chat-send-${task.id}" onclick="sendChatMessage('${task.id}')">Send</button>
             </div>
@@ -2219,8 +2129,7 @@
 
       function updateColorPresets(selected) {
         document.querySelectorAll(".color-preset").forEach((el) => {
-          const bg = el.style.background;
-          el.classList.toggle("selected", bg === selected);
+          el.classList.toggle("selected", el.dataset.color === selected);
         });
       }
 

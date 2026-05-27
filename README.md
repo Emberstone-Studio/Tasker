@@ -9,15 +9,19 @@ A local-first kanban board for Claude Code agents. Create tasks on the board, ru
 
 ## Getting started
 
-Drop the `Tasker/` folder anywhere, then run it from that directory:
+1. Drop the `Tasker/` folder anywhere on your machine.
 
-```
-node tasker.js
-```
+2. Run the installer from that directory:
+   ```
+   node tasker.js
+   ```
+   This installs five Claude Code skills and prints the next steps. It does **not** start a server.
 
-The server starts on `http://localhost:7842`, opens your browser automatically, and installs the `/tasker` and `/tasker-scan` Claude Code skills — see [Claude Code integration](#claude-code-integration) below.
+3. Reload your VS Code window so the new skills are available:
+   - Open the command palette (`Cmd+Shift+P` on macOS, or your configured shortcut on Windows/Linux)
+   - Run **Reload Window**
 
-> **First run only:** After running `tasker.js` for the first time, reload your VS Code window so the `/tasker` and `/tasker-scan` commands become available — `Cmd+Shift+P` → **Reload Window** on macOS, `Ctrl+Shift+P` → **Reload Window** on Windows/Linux.
+4. Run `/tasker` in Claude Code. This starts the server, opens the board in your browser, and begins the scan loop.
 
 ## Board
 
@@ -48,44 +52,54 @@ Each task has:
 3. Tasks move to **In Review** when done, with output in the activity log
 4. Review the output, then click **Move to Done**
 
+### Comments
+
+Each task has an activity log where you can leave comments. Any comments you add are included in the agent's prompt when the task is next picked up, so the agent can address them.
+
 ## Agents
 
 Built-in agents: **Researcher**, **Coder**, **Reviewer**, **Writer**. Each has a role (system prompt) and a colour used on cards.
 
 Add or edit agents from the **Agents** tab. The role field is the full system prompt sent to Claude Code when it executes a task for that agent — be specific.
 
-## Claude Code integration
+## Claude Code skills
 
-When `tasker.js` starts it installs two skills into `~/.claude/commands/`:
+Running `node tasker.js` installs five skills into `~/.claude/commands/`:
 
 | Skill | Purpose |
 |---|---|
-| `/tasker` | Starts the server (if not running) and begins processing the queue |
-| `/tasker-scan` | Checks the queue for ready tasks — used internally by the polling loop |
+| `/tasker` | Starts the server (if not running), opens the board, and starts the scan loop |
+| `/tasker-scan` | Starts the server if needed, checks the queue, executes ready tasks, then schedules `/tasker-watch` |
+| `/tasker-watch` | Waits 30 seconds, checks pause state, then calls `/tasker-scan` if not paused |
+| `/tasker-pause` | Pauses the scan loop (server keeps running) |
+| `/tasker-stop` | Shuts down the server |
 
 Tasker itself has no built-in model calls. All task execution happens inside Claude Code.
 
-### How `/tasker` works
+### How the loop works
 
-Run `/tasker` in Claude Code to start the executor loop:
+`/tasker-scan` and `/tasker-watch` alternate to keep the queue running:
 
-1. Reads `tasks.json` and finds all tasks with `"status": "ready"`
-2. Marks each task **In Progress**, then spawns a real sub-agent via the Agent tool to execute it — adopting the assigned agent's role as its persona
-3. Collects results and moves finished tasks to **In Review**, posting output to the board
-4. Schedules `/tasker-scan` to re-check every 30 seconds
+1. `/tasker-scan` starts the server (if not running), then scans the queue
+2. It reads `tasks.json`, finds all tasks with `"status": "ready"`, marks them **In Progress**, and spawns a dedicated sub-agent per task
+3. When agents finish, tasks move to **In Review** with output posted to the activity log
+4. `/tasker-scan` then schedules `/tasker-watch` with a 30-second delay
+5. `/tasker-watch` wakes up, checks the pause state, and calls `/tasker-scan` again if not paused
 
-The loop runs until you stop it or pause the queue. Tasks moved to Ready while it's running will be picked up on the next cycle.
+The loop runs until you pause or stop it. Tasks moved to Ready while the loop is running are picked up on the next cycle.
 
 ### Team lead + agent pattern
 
-`/tasker` acts as a team lead (orchestrator): it reads the queue, delegates each task to a dedicated sub-agent, then collects and records the results. Sub-agents have full access to Claude Code's tools — file read/write, shell, search, and so on.
+`/tasker-scan` acts as a team lead (orchestrator): it reads the queue, delegates each task to a dedicated sub-agent via the Agent tool, then collects and records the results. Sub-agents have full access to Claude Code's tools — file read/write, shell, search, and so on.
 
 ## Pause and resume
 
-The power button in the top-right corner lets you pause the executor:
+The board's top bar shows a **countdown** to the next scan. Two buttons sit to the right of it:
 
-- **On** — executor is running; Claude Code will pick up Ready tasks on the next cycle
-- **Paused** — `/tasker-scan` stops scheduling itself; no new tasks will be picked up until resumed
+- **Pause** (‖) — stops the loop after the current scan; the board shows "Paused — run: /tasker-scan"
+- **Stop** (⏻) — shuts down the server entirely
+
+To resume after pausing, run `/tasker-scan` in Claude Code. It always starts the server if needed and clears the paused state before scanning.
 
 ## Settings
 
@@ -99,5 +113,5 @@ State is persisted in `tasks.json` and synced to the browser in real time over S
 
 | File | Purpose |
 |---|---|
-| `tasker.js` | HTTP server, SSE broker, skill installer, serves the UI |
-| `tasks.json` | Persistent task state (created on first run) |
+| `tasker.js` | Skill installer (default) and HTTP server (`node tasker.js serve`) |
+| `tasks.json` | Persistent task state (created automatically on first server start) |
