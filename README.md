@@ -9,19 +9,15 @@ A local-first kanban board for Claude Code agents. Create tasks on the board, ru
 
 ## Getting started
 
-Drop the `Tasker/` folder anywhere, then run it from the directory you want agents to work in:
+Drop the `Tasker/` folder anywhere, then run it from that directory:
 
 ```
-# from your project root:
-node path/to/Tasker/tasker.js
-
-# or cd into it:
-cd Tasker && node tasker.js
+node tasker.js
 ```
 
-The server starts on `http://localhost:7842` and opens your browser automatically. It also installs the `/tasker` Claude Code skill — see [Claude Code integration](#claude-code-integration) below.
+The server starts on `http://localhost:7842`, opens your browser automatically, and installs the `/tasker` and `/tasker-scan` Claude Code skills — see [Claude Code integration](#claude-code-integration) below.
 
-> **First run only:** After running `tasker.js` for the first time, reload your VS Code window so the `/tasker` command becomes available — `Cmd+Shift+P` → **Reload Window** on macOS, `Ctrl+Shift+P` → **Reload Window** on Windows/Linux.
+> **First run only:** After running `tasker.js` for the first time, reload your VS Code window so the `/tasker` and `/tasker-scan` commands become available — `Cmd+Shift+P` → **Reload Window** on macOS, `Ctrl+Shift+P` → **Reload Window** on Windows/Linux.
 
 ## Board
 
@@ -60,36 +56,48 @@ Add or edit agents from the **Agents** tab. The role field is the full system pr
 
 ## Claude Code integration
 
-When `tasker.js` starts it writes a `/tasker` skill to `~/.claude/commands/tasker.md`. This is the execution engine — Tasker itself has no built-in model calls.
+When `tasker.js` starts it installs two skills into `~/.claude/commands/`:
+
+| Skill | Purpose |
+|---|---|
+| `/tasker` | Starts the server (if not running) and begins processing the queue |
+| `/tasker-scan` | Checks the queue for ready tasks — used internally by the polling loop |
+
+Tasker itself has no built-in model calls. All task execution happens inside Claude Code.
 
 ### How `/tasker` works
 
 Run `/tasker` in Claude Code to start the executor loop:
 
-1. Opens `tasker.html` in your default browser
-2. Reads `tasks.json` and finds all tasks with `"status": "ready"`
-3. Executes each task using Claude Code's own tools (file read/write, shell, search, etc.), adopting the assigned agent's role as its persona
-4. Moves finished tasks to **In Review** and posts output to the board
-5. Schedules itself to re-check every 30 seconds
+1. Reads `tasks.json` and finds all tasks with `"status": "ready"`
+2. Marks each task **In Progress**, then spawns a real sub-agent via the Agent tool to execute it — adopting the assigned agent's role as its persona
+3. Collects results and moves finished tasks to **In Review**, posting output to the board
+4. Schedules `/tasker-scan` to re-check every 30 seconds
 
-The loop runs until you stop it. Tasks moved to Ready while it's running will be picked up on the next cycle.
+The loop runs until you stop it or pause the queue. Tasks moved to Ready while it's running will be picked up on the next cycle.
 
-## Tasker toggle
+### Team lead + agent pattern
 
-The status indicator in the top-right corner shows the connection state and lets you pause the executor:
+`/tasker` acts as a team lead (orchestrator): it reads the queue, delegates each task to a dedicated sub-agent, then collects and records the results. Sub-agents have full access to Claude Code's tools — file read/write, shell, search, and so on.
 
-- **Green / on** — server is running
-- **Amber / off** — paused; Claude Code will not pick up new tasks until resumed
-- **Red / dimmed** — server not running; start it with `node tasker.js`
+## Pause and resume
+
+The power button in the top-right corner lets you pause the executor:
+
+- **On** — executor is running; Claude Code will pick up Ready tasks on the next cycle
+- **Paused** — `/tasker-scan` stops scheduling itself; no new tasks will be picked up until resumed
+
+## Settings
+
+Open the **Settings** panel to toggle between dark and light mode.
 
 ## Data
 
-State is persisted in `tasks.json` in the Tasker directory and synced to the browser in real time over SSE. The file is written on every state change.
+State is persisted in `tasks.json` and synced to the browser in real time over SSE. The file is written on every state change.
 
 ## Files
 
 | File | Purpose |
 |---|---|
-| `tasker.js` | HTTP server, SSE broker, skill installer |
-| `tasker.html` | Single-file frontend app (served by tasker.js) |
+| `tasker.js` | HTTP server, SSE broker, skill installer, serves the UI |
 | `tasks.json` | Persistent task state (created on first run) |

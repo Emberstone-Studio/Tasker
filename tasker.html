@@ -215,6 +215,15 @@
         user-select: none;
       }
 
+      #scan-countdown {
+        font-size: 11px;
+        font-family: var(--font-mono);
+        color: var(--text-tertiary);
+        display: none;
+        align-items: center;
+        white-space: nowrap;
+      }
+
       #watcher-status.disconnected {
         cursor: default;
         opacity: 0.5;
@@ -1225,8 +1234,9 @@
           </button>
         </div>
         <div id="topbar-right">
+          <span id="scan-countdown"></span>
           <div id="watcher-status" class="disconnected" onclick="toggleTasker()">
-            <span id="watcher-label">Offline — run: node tasker.js</span>
+            <span id="watcher-label">Offline — run: /tasker</span>
             <div class="toggle-switch"><div class="toggle-knob"></div></div>
           </div>
           <button id="btn-stop" onclick="stopTasker()" title="Stop Tasker" style="display:none;background:none;border:none;cursor:pointer;padding:4px 6px;color:var(--text-tertiary);transition:color 0.15s;line-height:1;" onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--text-tertiary)'"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg></button>
@@ -1553,7 +1563,7 @@
           eventSource = new EventSource(`${WATCHER_URL}/events`);
           eventSource.onopen = () => {}; // state set by 'connected' SSE event
           eventSource.onerror = () => {
-            setWatcherStatus("disconnected", "Offline — run: node tasker.js");
+            setWatcherStatus("disconnected", "Offline — run: /tasker");
             eventSource.close();
             eventSource = null;
             setTimeout(connectWatcher, 5000);
@@ -1568,9 +1578,42 @@
             handleWatcherEvent(ev);
           };
         } catch {
-          setWatcherStatus("disconnected", "Offline — run: node tasker.js");
+          setWatcherStatus("disconnected", "Offline — run: /tasker");
           setTimeout(connectWatcher, 5000);
         }
+      }
+
+      let countdownTimer = null;
+      let countdownSeconds = 0;
+
+      function startCountdown(seconds) {
+        stopCountdown();
+        countdownSeconds = seconds;
+        const el = document.getElementById("scan-countdown");
+        if (el) el.style.display = "flex";
+        updateCountdownDisplay();
+        countdownTimer = setInterval(() => {
+          countdownSeconds--;
+          if (countdownSeconds <= 0) {
+            stopCountdown();
+          } else {
+            updateCountdownDisplay();
+          }
+        }, 1000);
+      }
+
+      function stopCountdown() {
+        if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+        const el = document.getElementById("scan-countdown");
+        if (el) el.style.display = "none";
+      }
+
+      function updateCountdownDisplay() {
+        const el = document.getElementById("scan-countdown");
+        if (!el) return;
+        const m = Math.floor(countdownSeconds / 60);
+        const s = countdownSeconds % 60;
+        el.textContent = `Next scan in ${m}:${String(s).padStart(2, "0")}`;
       }
 
       function setWatcherStatus(cls, label) {
@@ -1580,11 +1623,12 @@
         if (el) el.className = cls;
         if (lbl) lbl.textContent = label;
         if (stop) stop.style.display = cls === "disconnected" ? "none" : "inline-flex";
+        if (cls !== "connected") stopCountdown();
       }
 
       function stopTasker() {
         if (!confirm("Stop the Tasker server?")) return;
-        setWatcherStatus("disconnected", "Offline — run: node tasker.js");
+        setWatcherStatus("disconnected", "Offline — run: /tasker");
         if (eventSource) { eventSource.close(); eventSource = null; }
         fetch(`${WATCHER_URL}/shutdown`, { method: "POST" }).catch(() => {});
       }
@@ -1600,6 +1644,7 @@
             setWatcherStatus("paused", "Paused");
           } else {
             setWatcherStatus("connected", "Running");
+            startCountdown(60);
           }
           return;
         }
@@ -1612,11 +1657,16 @@
             setWatcherStatus("paused", "Paused");
           } else {
             setWatcherStatus("connected", "Running");
+            startCountdown(60);
           }
           return;
         }
+        if (ev.type === "scan_heartbeat") {
+          startCountdown(60);
+          return;
+        }
         if (ev.type === "shutdown") {
-          setWatcherStatus("disconnected", "Offline — run: node tasker.js");
+          setWatcherStatus("disconnected", "Offline — run: /tasker");
           return;
         }
         if (ev.type === "task_update") {
