@@ -101,50 +101,23 @@ const server = http.createServer((req, res) => {
     return json(res, 200, { ok: true, paused: false });
   }
 
+  if (req.method === "GET" && req.url === "/paused") {
+    return json(res, 200, { paused });
+  }
+
+  if (req.method === "POST" && req.url === "/shutdown") {
+    json(res, 200, { ok: true });
+    broadcast({ type: "shutdown" });
+    setTimeout(() => { for (const r of clients) { try { r.end(); } catch {} } server.close(() => process.exit(0)); }, 200);
+    return;
+  }
+
   json(res, 404, { error: "Not found" });
 });
 
 // ─── Claude Code skill installer ─────────────────────────────────
 
-function installSkill() {
-  const commandsDir = path.join(os.homedir(), ".claude", "commands");
-  const skillFile = path.join(commandsDir, "tasker.md");
-
-  let step0;
-  if (process.platform === "win32") {
-    step0 = `0. **Start server and open UI**: If this invocation has a \`<command-name>\` tag in context (i.e., the user ran \`/tasker\` manually, not a ScheduleWakeup loop wakeup):
-   - Run this PowerShell to check if the server is running and start it if not (it opens the browser automatically on start); if already running, open the UI manually:
-   \`\`\`powershell
-   try {
-     Invoke-WebRequest http://localhost:7842/ -TimeoutSec 1 -ErrorAction Stop | Out-Null
-     Start-Process "${HTML_FILE}"
-   } catch {
-     Start-Process node -ArgumentList "${__dirname}\\tasker.js" -WorkingDirectory "${__dirname}"
-   }
-   \`\`\``;
-  } else {
-    const openCmd = process.platform === "darwin" ? `open "${HTML_FILE}"` : `xdg-open "${HTML_FILE}"`;
-    step0 = `0. **Start server and open UI**: If this invocation has a \`<command-name>\` tag in context (i.e., the user ran \`/tasker\` manually, not a ScheduleWakeup loop wakeup):
-   - Check if the server is running and start it if not:
-   \`\`\`bash
-   if curl -s http://localhost:7842/ > /dev/null 2>&1; then
-     ${openCmd}
-   else
-     nohup node "${__dirname}/tasker.js" > /dev/null 2>&1 &
-   fi
-   \`\`\``;
-  }
-
-  const content = `---
-description: Run Tasker — execute ready tasks from tasks.json and loop for more
----
-
-You are the Tasker agent executor. The Tasker installation is at: ${__dirname}
-
-Each time you are invoked, do the following in order:
-
-${step0}
-
+const TASK_INSTRUCTIONS = `
 1. **Check the queue**: Read \`${STATE_FILE}\`. Find all tasks with \`"status": "ready"\`.
 
 2. **Execute each ready task**:
@@ -155,18 +128,59 @@ ${step0}
    - Execute the work using your real tools (Read, Edit, Write, Bash, Glob, Grep, etc.)
    - When done, read \`${STATE_FILE}\` again, set this task's status to \`"in_review"\`, append an \`output\` entry to its \`activity\` array, POST the patched state to \`http://localhost:7842/state\`
 
-3. **Loop**: Use ScheduleWakeup with delaySeconds=30 and prompt \`/tasker\` to check again.
+3. **Loop**: Use ScheduleWakeup with delaySeconds=30 and prompt \`/tasker-scan\` to check again.
 
 If the Tasker server is not running (POST fails), write the state directly to \`${STATE_FILE}\`.
 
-Always work relative to the task's context — if the task mentions a project or file path, work there. Follow the agent persona strictly.
-`;
+Always work relative to the task's context — if the task mentions a project or file path, work there. Follow the agent persona strictly.`;
+
+function installSkills() {
+  const commandsDir = path.join(os.homedir(), ".claude", "commands");
+
+  const startBlock = process.platform === "win32"
+    ? `   \`\`\`powershell
+   try {
+     Invoke-WebRequest http://localhost:7842/ -TimeoutSec 1 -ErrorAction Stop | Out-Null
+     Start-Process "http://localhost:7842/"
+   } catch {
+     Start-Process node -ArgumentList "${__dirname}\\tasker.js" -WorkingDirectory "${__dirname}"
+   }
+   \`\`\``
+    : `   \`\`\`bash
+   if curl -s http://localhost:7842/ > /dev/null 2>&1; then
+     open "http://localhost:7842/"
+   else
+     nohup node "${__dirname}/tasker.js" > /dev/null 2>&1 &
+   fi
+   \`\`\``;
+
+  const taskerContent = `---
+description: Start Tasker and begin executing ready tasks from tasks.json
+---
+
+You are the Tasker agent executor. The Tasker installation is at: ${__dirname}
+
+1. **Start the server and open the UI**:
+${startBlock}
+${TASK_INSTRUCTIONS}`;
+
+  const scanContent = `---
+description: Check Tasker queue and execute any ready tasks
+---
+
+You are the Tasker agent executor. The Tasker installation is at: ${__dirname}
+
+1. **Check pause state**: Run `curl -s http://localhost:7842/paused`. If the response is `{"paused":true}`, stop immediately — do not execute tasks and do not schedule another wakeup. The loop is paused until the user resumes and runs `/tasker` again. If the server is not running (curl fails), also stop — do not reschedule.
+${TASK_INSTRUCTIONS}`;
+
   try {
     fs.mkdirSync(commandsDir, { recursive: true });
-    fs.writeFileSync(skillFile, content, "utf8");
+    fs.writeFileSync(path.join(commandsDir, "tasker.md"), taskerContent, "utf8");
     console.log(`[tasker] Skill installed: /tasker`);
+    fs.writeFileSync(path.join(commandsDir, "tasker-scan.md"), scanContent, "utf8");
+    console.log(`[tasker] Skill installed: /tasker-scan`);
   } catch (err) {
-    console.warn(`[tasker] Could not install /tasker skill: ${err.message}`);
+    console.warn(`[tasker] Could not install skills: ${err.message}`);
   }
 }
 
@@ -178,7 +192,7 @@ function openBrowser(url) {
   exec(cmd);
 }
 
-installSkill();
+installSkills();
 
 server.listen(PORT, "127.0.0.1", () => {
   console.log(`[tasker] Running at http://localhost:${PORT}`);

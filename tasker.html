@@ -70,20 +70,47 @@
       }
 
       :root {
-        --bg: #0a0a0a;
-        --card-bg: #111111;
-        --border: #222222;
+        --bg: #080808;
+        --bg-input: #0d0d0d;
+        --bg-subtle: #0d0d0d;
+        --bg-badge: #1e1e1e;
+        --card-bg: #141414;
+        --card-bg-hover: #1a1a1a;
+        --border: #2a2a2a;
+        --border-hover: #444444;
+        --scrollbar: #333333;
+        --scrollbar-hover: #444444;
+        --toggle-bg: #222222;
+        --toggle-border: #3a3a3a;
         --accent: #5865f2;
         --accent-hover: #4752c4;
-        --text-primary: #e8e8e8;
-        --text-secondary: #666666;
-        --text-tertiary: #444444;
+        --text-primary: #f0f0f0;
+        --text-secondary: #888888;
+        --text-tertiary: #555555;
         --danger: #ef4444;
         --success: #10b981;
         --warning: #f59e0b;
         --font-mono: "JetBrains Mono", "Fira Mono", "Courier New", monospace;
         --font-ui:
           system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      [data-theme="light"] {
+        --bg: #e8e8e8;
+        --bg-input: #ffffff;
+        --bg-subtle: #dedede;
+        --bg-badge: #d4d4d4;
+        --card-bg: #ffffff;
+        --card-bg-hover: #f0f0f0;
+        --border: #c8c8c8;
+        --border-hover: #999999;
+        --scrollbar: #bbbbbb;
+        --scrollbar-hover: #999999;
+        --toggle-bg: #d4d4d4;
+        --toggle-border: #bbbbbb;
+        --text-primary: #111111;
+        --text-secondary: #555555;
+        --text-tertiary: #999999;
       }
 
       html,
@@ -106,10 +133,10 @@
         background: transparent;
       }
       ::-webkit-scrollbar-thumb {
-        background: #2a2a2a;
+        background: var(--scrollbar);
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: #3a3a3a;
+        background: var(--scrollbar-hover);
       }
 
       /* ─── TOP BAR ──────────────────────────────────────── */
@@ -201,8 +228,8 @@
         width: 32px;
         height: 17px;
         border-radius: 9px;
-        background: #1e1e1e;
-        border: 1px solid #333;
+        background: var(--toggle-bg);
+        border: 1px solid var(--toggle-border);
         position: relative;
         flex-shrink: 0;
         transition: background 0.2s, border-color 0.2s;
@@ -300,7 +327,7 @@
         flex-shrink: 0;
         display: flex;
         flex-direction: column;
-        background: #0d0d0d;
+        background: var(--bg-subtle);
         border: 1px solid var(--border);
       }
 
@@ -325,7 +352,7 @@
       }
 
       .col-count {
-        background: #1a1a1a;
+        background: var(--bg-badge);
         border: 1px solid var(--border);
         color: var(--text-secondary);
         font-size: 10px;
@@ -379,9 +406,9 @@
       }
 
       .task-card:hover {
-        border-color: #333;
+        border-color: var(--border-hover);
         border-left-color: inherit;
-        background: #141414;
+        background: var(--card-bg-hover);
       }
 
       .task-card.dragging {
@@ -419,7 +446,7 @@
         background: #f59e0b;
       }
       .priority-dot.low {
-        background: #444444;
+        background: var(--text-tertiary);
       }
 
       .card-desc {
@@ -517,7 +544,7 @@
       }
 
       .btn-secondary:hover {
-        border-color: #444;
+        border-color: var(--border-hover);
         color: var(--text-primary);
       }
 
@@ -599,14 +626,14 @@
         display: flex;
         gap: 12px;
         padding: 5px 8px;
-        border-bottom: 1px solid #141414;
+        border-bottom: 1px solid var(--card-bg-hover);
         font-family: var(--font-mono);
         font-size: 12px;
         align-items: flex-start;
       }
 
       .log-entry:hover {
-        background: #111;
+        background: var(--card-bg);
       }
 
       .log-ts {
@@ -646,7 +673,7 @@
       }
 
       .modal {
-        background: #111;
+        background: var(--card-bg);
         border: 1px solid var(--border);
         width: 100%;
         max-width: 580px;
@@ -731,7 +758,7 @@
       .form-select,
       .form-textarea {
         width: 100%;
-        background: #0a0a0a;
+        background: var(--bg-input);
         border: 1px solid var(--border);
         color: var(--text-primary);
         font-size: 13px;
@@ -768,7 +795,7 @@
       }
 
       .form-select option {
-        background: #1a1a1a;
+        background: var(--bg-badge);
         color: var(--text-primary);
       }
 
@@ -819,7 +846,7 @@
       }
 
       .radio-opt:hover {
-        border-color: #444;
+        border-color: var(--border-hover);
       }
       .radio-opt.selected {
         border-color: var(--accent);
@@ -865,7 +892,7 @@
         font-size: 11px;
         font-family: var(--font-mono);
         padding: 6px 0;
-        border-bottom: 1px solid #1a1a1a;
+        border-bottom: 1px solid var(--bg-badge);
       }
 
       .activity-item.type-output {
@@ -892,7 +919,7 @@
       }
 
       .activity-item.type-output .activity-content {
-        background: #0d0d0d;
+        background: var(--bg-subtle);
         border: 1px solid var(--border);
         padding: 10px 12px;
         color: var(--text-primary);
@@ -931,7 +958,7 @@
       .card-progress {
         margin-top: 8px;
         height: 2px;
-        background: #1a1a1a;
+        background: var(--bg-badge);
         overflow: hidden;
         position: relative;
       }
@@ -983,7 +1010,7 @@
       }
 
       .chat-msg.agent .chat-bubble {
-        background: #0d0d0d;
+        background: var(--bg-subtle);
         border: 1px solid var(--border);
         color: var(--text-primary);
         font-family: var(--font-mono);
@@ -1014,7 +1041,7 @@
 
       .chat-input {
         flex: 1;
-        background: #0a0a0a;
+        background: var(--bg-input);
         border: 1px solid var(--border);
         color: var(--text-primary);
         font-size: 13px;
@@ -1072,7 +1099,7 @@
       }
 
       .model-row {
-        background: #0d0d0d;
+        background: var(--bg-subtle);
         border: 1px solid var(--border);
         padding: 14px;
         margin-bottom: 10px;
@@ -1202,6 +1229,7 @@
             <span id="watcher-label">Offline — run: node tasker.js</span>
             <div class="toggle-switch"><div class="toggle-knob"></div></div>
           </div>
+          <button id="btn-stop" onclick="stopTasker()" title="Stop Tasker" style="display:none;background:none;border:none;cursor:pointer;padding:4px 6px;color:var(--text-tertiary);transition:color 0.15s;line-height:1;" onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--text-tertiary)'"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg></button>
           <button id="btn-settings" onclick="openSettings()" title="Settings">
             ⚙
           </button>
@@ -1364,6 +1392,19 @@
           </button>
         </div>
         <div class="modal-body">
+          <div class="settings-section">
+            <div class="settings-section-title">Appearance</div>
+            <div onclick="toggleTheme()" title="Toggle theme" style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;color:var(--text-secondary);">
+              <!-- moon -->
+              <svg id="icon-moon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+              <!-- pill switch -->
+              <div id="theme-switch-track" style="width:36px;height:20px;border-radius:10px;background:var(--toggle-bg);border:1px solid var(--toggle-border);position:relative;transition:background 0.2s,border-color 0.2s;flex-shrink:0;">
+                <div id="theme-switch-knob" style="position:absolute;top:3px;left:3px;width:12px;height:12px;border-radius:50%;background:var(--text-secondary);transition:transform 0.2s,background 0.2s;"></div>
+              </div>
+              <!-- sun -->
+              <svg id="icon-sun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+            </div>
+          </div>
           <div class="settings-section">
             <div class="settings-section-title">Data</div>
             <div style="display: flex; gap: 8px; flex-wrap: wrap">
@@ -1535,8 +1576,17 @@
       function setWatcherStatus(cls, label) {
         const el = document.getElementById("watcher-status");
         const lbl = document.getElementById("watcher-label");
+        const stop = document.getElementById("btn-stop");
         if (el) el.className = cls;
         if (lbl) lbl.textContent = label;
+        if (stop) stop.style.display = cls === "disconnected" ? "none" : "inline-flex";
+      }
+
+      function stopTasker() {
+        if (!confirm("Stop the Tasker server?")) return;
+        setWatcherStatus("disconnected", "Offline — run: node tasker.js");
+        if (eventSource) { eventSource.close(); eventSource = null; }
+        fetch(`${WATCHER_URL}/shutdown`, { method: "POST" }).catch(() => {});
       }
 
       function handleWatcherEvent(ev) {
@@ -1563,6 +1613,10 @@
           } else {
             setWatcherStatus("connected", "Running");
           }
+          return;
+        }
+        if (ev.type === "shutdown") {
+          setWatcherStatus("disconnected", "Offline — run: node tasker.js");
           return;
         }
         if (ev.type === "task_update") {
@@ -2215,7 +2269,36 @@
       // ─────────────────────────────────────────────────────────────────
 
       function openSettings() {
+        updateThemeButton();
         openModal("settings-modal");
+      }
+
+      function toggleTheme() {
+        const isLight = document.documentElement.getAttribute("data-theme") === "light";
+        const next = isLight ? "dark" : "light";
+        applyTheme(next);
+        localStorage.setItem("tasker-theme", next);
+      }
+
+      function applyTheme(theme) {
+        if (theme === "light") {
+          document.documentElement.setAttribute("data-theme", "light");
+        } else {
+          document.documentElement.removeAttribute("data-theme");
+        }
+        updateThemeButton();
+      }
+
+      function updateThemeButton() {
+        const knob = document.getElementById("theme-switch-knob");
+        const moon = document.getElementById("icon-moon");
+        const sun  = document.getElementById("icon-sun");
+        if (!knob) return;
+        const isLight = document.documentElement.getAttribute("data-theme") === "light";
+        knob.style.transform = isLight ? "translateX(16px)" : "translateX(0)";
+        knob.style.background = isLight ? "var(--accent)" : "var(--text-secondary)";
+        moon.style.color = isLight ? "var(--text-tertiary)" : "var(--text-primary)";
+        sun.style.color  = isLight ? "var(--text-primary)"  : "var(--text-tertiary)";
       }
 
       function exportState() {
@@ -2310,6 +2393,7 @@
       // ─────────────────────────────────────────────────────────────────
 
       (function init() {
+        applyTheme(localStorage.getItem("tasker-theme") || "dark");
         loadState();
         renderBoard();
         connectWatcher();

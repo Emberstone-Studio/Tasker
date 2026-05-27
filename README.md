@@ -21,6 +21,8 @@ cd Tasker && node tasker.js
 
 The server starts on `http://localhost:7842` and opens your browser automatically. It also installs the `/tasker` Claude Code skill — see [Claude Code integration](#claude-code-integration) below.
 
+> **First run only:** After running `tasker.js` for the first time, reload your VS Code window so the `/tasker` command becomes available — `Cmd+Shift+P` → **Reload Window** on macOS, `Ctrl+Shift+P` → **Reload Window** on Windows/Linux.
+
 ## Board
 
 Tasks move through five columns:
@@ -68,7 +70,7 @@ Run `/tasker` in Claude Code to start the executor loop:
 2. Reads `tasks.json` and finds all tasks with `"status": "ready"`
 3. Executes each task using Claude Code's own tools (file read/write, shell, search, etc.), adopting the assigned agent's role as its persona
 4. Moves finished tasks to **In Review** and posts output to the board
-5. Schedules itself to re-check every 60 seconds
+5. Schedules itself to re-check every 30 seconds
 
 The loop runs until you stop it. Tasks moved to Ready while it's running will be picked up on the next cycle.
 
