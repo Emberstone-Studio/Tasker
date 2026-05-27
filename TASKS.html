@@ -1,0 +1,2884 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tasker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <script id="app-state" type="application/json">
+      {
+        "setup_complete": false,
+        "writing": false,
+        "tasks": [],
+        "agents": [
+          {
+            "id": "agent-researcher-default",
+            "name": "Researcher",
+            "role": "You are a research agent. Your job is to find information, audit codebases, summarize findings, and answer questions with cited sources. Be thorough and precise. Prefer facts over speculation.",
+            "default_model_id": null,
+            "default_temperature": 0.3,
+            "color": "#3b82f6"
+          },
+          {
+            "id": "agent-coder-default",
+            "name": "Coder",
+            "role": "You are a coding agent. Your job is to write, edit, debug, and explain code. Produce clean, working code with no unnecessary comments. Follow the existing conventions in the codebase.",
+            "default_model_id": null,
+            "default_temperature": 0.2,
+            "color": "#10b981"
+          },
+          {
+            "id": "agent-reviewer-default",
+            "name": "Reviewer",
+            "role": "You are a review agent. Your job is to review output from other agents, flag issues, identify improvements, and provide actionable feedback. Be direct and specific.",
+            "default_model_id": null,
+            "default_temperature": 0.4,
+            "color": "#f59e0b"
+          },
+          {
+            "id": "agent-writer-default",
+            "name": "Writer",
+            "role": "You are a writing agent. Your job is to write documentation, copy, summaries, and prose. Match the existing tone and style. Be clear and concise.",
+            "default_model_id": null,
+            "default_temperature": 0.6,
+            "color": "#8b5cf6"
+          }
+        ],
+        "models": [
+          {
+            "id": "model-claude-sonnet-default",
+            "name": "Claude Sonnet",
+            "provider": "anthropic",
+            "endpoint": "https://api.anthropic.com/v1/messages",
+            "api_key": "",
+            "model_string": "claude-sonnet-4-6"
+          }
+        ],
+        "logs": []
+      }
+    </script>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg: #0a0a0a;
+        --card-bg: #111111;
+        --border: #222222;
+        --accent: #5865f2;
+        --accent-hover: #4752c4;
+        --text-primary: #e8e8e8;
+        --text-secondary: #666666;
+        --text-tertiary: #444444;
+        --danger: #ef4444;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --font-mono: "JetBrains Mono", "Fira Mono", "Courier New", monospace;
+        --font-ui:
+          system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      html,
+      body {
+        height: 100%;
+        background: var(--bg);
+        color: var(--text-primary);
+        font-family: var(--font-ui);
+        font-size: 14px;
+        line-height: 1.5;
+        overflow: hidden;
+      }
+
+      /* Scrollbar */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #2a2a2a;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #3a3a3a;
+      }
+
+      /* ─── TOP BAR ──────────────────────────────────────── */
+      #topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 48px;
+        padding: 0 16px;
+        border-bottom: 1px solid var(--border);
+        background: var(--bg);
+        position: relative;
+        z-index: 100;
+        flex-shrink: 0;
+      }
+
+      #topbar-left {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      #logo {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-primary);
+        letter-spacing: -0.3px;
+        margin-right: 12px;
+      }
+
+      .tab-btn {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 13px;
+        font-family: var(--font-ui);
+        padding: 6px 12px;
+        transition: color 0.15s;
+        position: relative;
+      }
+
+      .tab-btn:hover {
+        color: var(--text-primary);
+      }
+
+      .tab-btn.active {
+        color: var(--text-primary);
+      }
+
+      .tab-btn.active::after {
+        content: "";
+        position: absolute;
+        bottom: -10px;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: var(--accent);
+      }
+
+      #topbar-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      #watcher-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 11px;
+        font-family: var(--font-mono);
+        color: var(--text-secondary);
+        cursor: pointer;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+
+      #watcher-status.disconnected {
+        cursor: default;
+        opacity: 0.5;
+      }
+
+      .toggle-switch {
+        width: 32px;
+        height: 17px;
+        border-radius: 9px;
+        background: #1e1e1e;
+        border: 1px solid #333;
+        position: relative;
+        flex-shrink: 0;
+        transition: background 0.2s, border-color 0.2s;
+      }
+
+      .toggle-knob {
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        background: var(--danger);
+        transition: transform 0.2s, background 0.2s;
+      }
+
+      #watcher-status.connected .toggle-switch {
+        background: rgba(16, 185, 129, 0.15);
+        border-color: var(--success);
+      }
+      #watcher-status.connected .toggle-knob {
+        transform: translateX(15px);
+        background: var(--success);
+      }
+
+      #watcher-status.paused .toggle-switch {
+        background: rgba(245, 158, 11, 0.1);
+        border-color: var(--warning);
+      }
+      #watcher-status.paused .toggle-knob {
+        background: var(--warning);
+      }
+
+      #watcher-status.connected:hover .toggle-switch,
+      #watcher-status.paused:hover .toggle-switch {
+        filter: brightness(1.2);
+      }
+
+      #btn-settings {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 18px;
+        padding: 4px 6px;
+        transition: color 0.15s;
+        line-height: 1;
+      }
+
+      #btn-settings:hover {
+        color: var(--text-primary);
+      }
+
+      /* ─── MAIN LAYOUT ───────────────────────────────────── */
+      #app {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+      }
+
+      #main {
+        flex: 1;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .tab-panel {
+        display: none;
+        flex: 1;
+        overflow: hidden;
+      }
+
+      .tab-panel.active {
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* ─── BOARD TAB ─────────────────────────────────────── */
+      #tasks-panel {
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 16px;
+      }
+
+      #tasks-columns {
+        display: flex;
+        gap: 12px;
+        height: 100%;
+        min-width: max-content;
+      }
+
+      .column {
+        width: 280px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        background: #0d0d0d;
+        border: 1px solid var(--border);
+      }
+
+      .column-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+      }
+
+      .column-title {
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .col-count {
+        background: #1a1a1a;
+        border: 1px solid var(--border);
+        color: var(--text-secondary);
+        font-size: 10px;
+        padding: 1px 6px;
+        font-family: var(--font-mono);
+      }
+
+      .btn-add-task {
+        background: none;
+        border: none;
+        color: var(--text-tertiary);
+        cursor: pointer;
+        font-size: 18px;
+        line-height: 1;
+        padding: 0 2px;
+        transition: color 0.15s;
+      }
+
+      .btn-add-task:hover {
+        color: var(--text-primary);
+      }
+
+      .column-cards {
+        flex: 1;
+        overflow-y: auto;
+        padding: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-height: 60px;
+      }
+
+      .column-cards.drag-over {
+        background: rgba(88, 101, 242, 0.05);
+        outline: 1px dashed var(--accent);
+        outline-offset: -4px;
+      }
+
+      /* ─── TASK CARDS ────────────────────────────────────── */
+      .task-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-left: 3px solid var(--text-tertiary);
+        padding: 10px 10px 10px 12px;
+        cursor: pointer;
+        position: relative;
+        transition:
+          border-color 0.15s,
+          background 0.15s;
+        user-select: none;
+      }
+
+      .task-card:hover {
+        border-color: #333;
+        border-left-color: inherit;
+        background: #141414;
+      }
+
+      .task-card.dragging {
+        opacity: 0.4;
+      }
+
+      .card-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 6px;
+      }
+
+      .card-title {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-primary);
+        line-height: 1.4;
+        flex: 1;
+      }
+
+      .priority-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        margin-top: 4px;
+      }
+
+      .priority-dot.high {
+        background: #ef4444;
+      }
+      .priority-dot.medium {
+        background: #f59e0b;
+      }
+      .priority-dot.low {
+        background: #444444;
+      }
+
+      .card-desc {
+        font-size: 12px;
+        color: var(--text-secondary);
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        line-height: 1.5;
+        margin-bottom: 8px;
+      }
+
+      .card-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .card-agent-info {
+        font-size: 11px;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+        overflow: hidden;
+      }
+
+      .agent-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      .card-agent-name {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .card-date {
+        font-size: 10px;
+        color: var(--text-tertiary);
+        font-family: var(--font-mono);
+        flex-shrink: 0;
+      }
+
+      /* ─── AGENTS TAB ────────────────────────────────────── */
+      #agents-panel {
+        overflow-y: auto;
+        padding: 20px;
+      }
+
+      .panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+      }
+
+      .panel-title {
+        font-size: 16px;
+        font-weight: 600;
+      }
+
+      .btn-primary,
+      .btn-secondary,
+      .btn-danger,
+      .btn-execute {
+        cursor: pointer;
+        font-size: 13px;
+        font-family: var(--font-ui);
+        font-weight: 500;
+        padding: 7px 16px;
+        transition: all 0.15s;
+        white-space: nowrap;
+      }
+
+      .btn-primary {
+        background: var(--accent);
+        border: none;
+        color: #fff;
+      }
+
+      .btn-primary:hover {
+        background: var(--accent-hover);
+      }
+
+      .btn-secondary {
+        background: none;
+        border: 1px solid var(--border);
+        color: var(--text-secondary);
+      }
+
+      .btn-secondary:hover {
+        border-color: #444;
+        color: var(--text-primary);
+      }
+
+      .btn-danger {
+        background: none;
+        border: 1px solid transparent;
+        color: var(--text-secondary);
+      }
+
+      .btn-danger:hover {
+        border-color: var(--danger);
+        color: var(--danger);
+      }
+
+      #agents-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 12px;
+      }
+
+      .agent-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        padding: 16px;
+        border-left: 3px solid var(--text-tertiary);
+      }
+
+      .agent-card-top {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+
+      .agent-color-swatch {
+        width: 28px;
+        height: 28px;
+        flex-shrink: 0;
+      }
+
+      .agent-name {
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .agent-role-preview {
+        font-size: 12px;
+        color: var(--text-secondary);
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        margin-bottom: 10px;
+        line-height: 1.5;
+      }
+
+      .agent-meta-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 12px;
+        font-size: 11px;
+        color: var(--text-secondary);
+      }
+
+      .agent-card-actions {
+        display: flex;
+        gap: 6px;
+      }
+
+      /* ─── LOG TAB ───────────────────────────────────────── */
+      #log-panel {
+        overflow-y: auto;
+        padding: 16px;
+        gap: 2px;
+      }
+
+      .log-entry {
+        display: flex;
+        gap: 12px;
+        padding: 5px 8px;
+        border-bottom: 1px solid #141414;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        align-items: flex-start;
+      }
+
+      .log-entry:hover {
+        background: #111;
+      }
+
+      .log-ts {
+        color: var(--text-tertiary);
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
+      .log-msg {
+        color: var(--text-secondary);
+      }
+      .log-msg.task-ref {
+        color: var(--text-primary);
+      }
+
+      #log-empty {
+        color: var(--text-tertiary);
+        font-family: var(--font-mono);
+        font-size: 12px;
+        padding: 20px 8px;
+      }
+
+      /* ─── MODALS ────────────────────────────────────────── */
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 500;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+
+      .modal-overlay.hidden {
+        display: none;
+      }
+
+      .modal {
+        background: #111;
+        border: 1px solid var(--border);
+        width: 100%;
+        max-width: 580px;
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+      }
+
+      .modal.modal-wide {
+        max-width: 720px;
+      }
+
+      .modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+      }
+
+      .modal-title {
+        font-size: 15px;
+        font-weight: 600;
+      }
+
+      .btn-close {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 20px;
+        line-height: 1;
+        padding: 2px 4px;
+        transition: color 0.15s;
+      }
+
+      .btn-close:hover {
+        color: var(--text-primary);
+      }
+
+      .modal-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+      }
+
+      .modal-footer {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        padding: 12px 20px;
+        border-top: 1px solid var(--border);
+        flex-shrink: 0;
+      }
+
+      /* ─── FORM ELEMENTS ─────────────────────────────────── */
+      .form-group {
+        margin-bottom: 16px;
+      }
+
+      .form-label {
+        display: block;
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-bottom: 6px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .form-hint {
+        font-size: 11px;
+        color: var(--text-secondary);
+        margin-top: 5px;
+        line-height: 1.4;
+      }
+
+      .form-input,
+      .form-select,
+      .form-textarea {
+        width: 100%;
+        background: #0a0a0a;
+        border: 1px solid var(--border);
+        color: var(--text-primary);
+        font-size: 13px;
+        font-family: var(--font-ui);
+        padding: 8px 10px;
+        outline: none;
+        transition: border-color 0.15s;
+      }
+
+      .form-input:focus,
+      .form-select:focus,
+      .form-textarea:focus {
+        border-color: var(--accent);
+      }
+
+      .form-textarea {
+        resize: vertical;
+        min-height: 80px;
+        font-family: var(--font-ui);
+      }
+
+      .form-textarea.mono {
+        font-family: var(--font-mono);
+        font-size: 12px;
+      }
+
+      .form-select {
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        padding-right: 28px;
+        cursor: pointer;
+      }
+
+      .form-select option {
+        background: #1a1a1a;
+        color: var(--text-primary);
+      }
+
+      .range-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .form-range {
+        flex: 1;
+        -webkit-appearance: none;
+        height: 3px;
+        background: var(--border);
+        outline: none;
+        cursor: pointer;
+      }
+
+      .form-range::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 14px;
+        height: 14px;
+        background: var(--accent);
+        cursor: pointer;
+      }
+
+      .range-val {
+        font-size: 12px;
+        font-family: var(--font-mono);
+        color: var(--text-secondary);
+        min-width: 28px;
+        text-align: right;
+      }
+
+      .radio-group {
+        display: flex;
+        gap: 8px;
+      }
+
+      .radio-opt {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border: 1px solid var(--border);
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+
+      .radio-opt:hover {
+        border-color: #444;
+      }
+      .radio-opt.selected {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .radio-opt input {
+        display: none;
+      }
+
+      .radio-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+      }
+
+      /* ─── ACTIVITY LOG in modal ─────────────────────────── */
+      .activity-section {
+        margin-top: 20px;
+        border-top: 1px solid var(--border);
+        padding-top: 16px;
+      }
+
+      .activity-title {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        color: var(--text-secondary);
+        margin-bottom: 10px;
+      }
+
+      .activity-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        max-height: 480px;
+        overflow-y: auto;
+      }
+
+      .activity-item {
+        display: flex;
+        gap: 10px;
+        font-size: 11px;
+        font-family: var(--font-mono);
+        padding: 6px 0;
+        border-bottom: 1px solid #1a1a1a;
+      }
+
+      .activity-item.type-output {
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .activity-item.type-output .activity-meta {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .activity-ts {
+        color: var(--text-tertiary);
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
+      .activity-content {
+        color: var(--text-secondary);
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .activity-item.type-output .activity-content {
+        background: #0d0d0d;
+        border: 1px solid var(--border);
+        padding: 10px 12px;
+        color: var(--text-primary);
+        font-size: 12px;
+        line-height: 1.6;
+      }
+
+      .activity-type {
+        padding: 1px 5px;
+        font-size: 10px;
+        border: 1px solid var(--border);
+        color: var(--text-tertiary);
+        flex-shrink: 0;
+      }
+
+      /* ─── EXECUTE BUTTON ────────────────────────────────── */
+      .btn-execute {
+        background: var(--danger);
+        border: none;
+        color: #fff;
+      }
+
+      .btn-execute:hover {
+        background: #dc2626;
+      }
+
+      /* ─── MOVE TO DONE BUTTON ───────────────────────────── */
+      .btn-move-done {
+        background: var(--success);
+        border: none;
+        color: #fff;
+        cursor: pointer;
+        font-size: 13px;
+        font-family: var(--font-ui);
+        font-weight: 500;
+        padding: 7px 16px;
+        transition: all 0.15s;
+        white-space: nowrap;
+      }
+
+      .btn-move-done:hover {
+        background: #059669;
+      }
+
+      /* ─── PROGRESS BAR ──────────────────────────────────── */
+      .card-progress {
+        margin-top: 8px;
+        height: 2px;
+        background: #1a1a1a;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .card-progress-bar {
+        height: 100%;
+        background: var(--accent);
+        transition: width 0.5s ease;
+      }
+
+      @keyframes card-indeterminate {
+        0%   { transform: translateX(-200%); }
+        100% { transform: translateX(400%); }
+      }
+
+      .card-progress-bar.indeterminate {
+        width: 35%;
+        animation: card-indeterminate 1.4s ease-in-out infinite;
+      }
+
+      /* ─── CHAT THREAD ───────────────────────────────────── */
+      .chat-messages {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-height: 360px;
+        overflow-y: auto;
+        margin-bottom: 10px;
+        padding-right: 4px;
+      }
+
+      .chat-msg { display: flex; flex-direction: column; gap: 3px; max-width: 85%; }
+      .chat-msg.user  { align-self: flex-end;   align-items: flex-end; }
+      .chat-msg.agent { align-self: flex-start; align-items: flex-start; max-width: 100%; }
+      .chat-msg.system { align-self: center; align-items: center; max-width: 100%; width: 100%; }
+
+      .chat-bubble {
+        padding: 8px 12px;
+        font-size: 12px;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .chat-msg.user .chat-bubble {
+        background: rgba(88, 101, 242, 0.12);
+        border: 1px solid rgba(88, 101, 242, 0.25);
+        color: var(--text-primary);
+      }
+
+      .chat-msg.agent .chat-bubble {
+        background: #0d0d0d;
+        border: 1px solid var(--border);
+        color: var(--text-primary);
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+      }
+
+      .chat-msg.system .chat-bubble {
+        background: transparent;
+        border: none;
+        color: var(--text-tertiary);
+        font-size: 10px;
+        font-family: var(--font-mono);
+        padding: 1px 0;
+        text-align: center;
+      }
+
+      .chat-meta {
+        font-size: 10px;
+        color: var(--text-tertiary);
+        font-family: var(--font-mono);
+      }
+
+      .chat-input-row {
+        display: flex;
+        gap: 8px;
+        align-items: flex-end;
+      }
+
+      .chat-input {
+        flex: 1;
+        background: #0a0a0a;
+        border: 1px solid var(--border);
+        color: var(--text-primary);
+        font-size: 13px;
+        font-family: var(--font-ui);
+        padding: 8px 10px;
+        outline: none;
+        resize: none;
+        min-height: 36px;
+        line-height: 1.4;
+        transition: border-color 0.15s;
+      }
+
+      .chat-input:focus { border-color: var(--accent); }
+
+      .btn-send {
+        background: var(--accent);
+        border: none;
+        color: #fff;
+        cursor: pointer;
+        font-size: 13px;
+        font-family: var(--font-ui);
+        font-weight: 500;
+        padding: 7px 14px;
+        transition: background 0.15s;
+        flex-shrink: 0;
+        height: 36px;
+      }
+
+      .btn-send:hover { background: var(--accent-hover); }
+      .btn-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+      /* ─── SETTINGS MODAL ────────────────────────────────── */
+      .settings-section {
+        margin-bottom: 24px;
+      }
+
+      .settings-section-title {
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        color: var(--text-secondary);
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .warning-banner {
+        background: rgba(245, 158, 11, 0.08);
+        border: 1px solid rgba(245, 158, 11, 0.25);
+        padding: 10px 14px;
+        font-size: 12px;
+        color: #f59e0b;
+        margin-bottom: 16px;
+      }
+
+      .model-row {
+        background: #0d0d0d;
+        border: 1px solid var(--border);
+        padding: 14px;
+        margin-bottom: 10px;
+        position: relative;
+      }
+
+      .model-row-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 10px;
+      }
+
+      .model-row-name {
+        font-size: 13px;
+        font-weight: 500;
+      }
+
+      .model-fields {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .model-fields .form-group {
+        margin-bottom: 0;
+      }
+
+      .model-fields .form-group.full-width {
+        grid-column: 1 / -1;
+      }
+
+      .color-presets {
+        display: flex;
+        gap: 8px;
+        margin-top: 6px;
+      }
+
+      .color-preset {
+        width: 24px;
+        height: 24px;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: border-color 0.15s;
+      }
+
+      .color-preset:hover,
+      .color-preset.selected {
+        border-color: var(--text-primary);
+      }
+
+      /* ─── SPLASH OVERLAY ────────────────────────────────── */
+      #splash {
+        position: fixed;
+        inset: 0;
+        background: var(--bg);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 20px;
+      }
+
+      #splash.hidden {
+        display: none;
+      }
+
+      .splash-inner {
+        max-width: 560px;
+        width: 100%;
+      }
+
+      .splash-title {
+        font-size: 28px;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+        margin-bottom: 10px;
+      }
+
+      .splash-subtitle {
+        font-size: 14px;
+        color: var(--text-secondary);
+        line-height: 1.6;
+        margin-bottom: 32px;
+      }
+
+      .splash-steps {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        margin-bottom: 32px;
+      }
+
+      .splash-step {
+        display: flex;
+        gap: 14px;
+        align-items: flex-start;
+      }
+
+      .step-num {
+        width: 24px;
+        height: 24px;
+        background: var(--accent);
+        color: #fff;
+        font-size: 12px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        margin-top: 1px;
+      }
+
+      .step-content {
+        flex: 1;
+      }
+
+      .step-label {
+        font-size: 14px;
+        color: var(--text-primary);
+        margin-bottom: 4px;
+      }
+
+      .step-code {
+        background: #1a1a1a;
+        border: 1px solid var(--border);
+        padding: 6px 10px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: #10b981;
+        display: inline-block;
+        margin-top: 4px;
+      }
+
+      .btn-get-started {
+        background: var(--accent);
+        border: none;
+        color: #fff;
+        cursor: pointer;
+        font-size: 15px;
+        font-family: var(--font-ui);
+        font-weight: 600;
+        padding: 12px 32px;
+        transition: background 0.15s;
+        letter-spacing: 0.3px;
+      }
+
+      .btn-get-started:hover {
+        background: var(--accent-hover);
+      }
+
+      /* ─── COLOR PICKER ──────────────────────────────────── */
+      .color-input-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      input[type="color"] {
+        width: 36px;
+        height: 28px;
+        border: 1px solid var(--border);
+        background: var(--card-bg);
+        cursor: pointer;
+        padding: 2px;
+      }
+
+      /* ─── DIVIDERS ──────────────────────────────────────── */
+      .divider {
+        height: 1px;
+        background: var(--border);
+        margin: 16px 0;
+      }
+
+      /* ─── MISC UTILS ────────────────────────────────────── */
+      .hidden {
+        display: none !important;
+      }
+      .text-danger {
+        color: var(--danger);
+      }
+      .text-secondary {
+        color: var(--text-secondary);
+      }
+      .text-mono {
+        font-family: var(--font-mono);
+      }
+      .mt-4 {
+        margin-top: 4px;
+      }
+      .mt-8 {
+        margin-top: 8px;
+      }
+      .mb-0 {
+        margin-bottom: 0 !important;
+      }
+      .full-width {
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ─── SPLASH SCREEN ──────────────────────────────────── -->
+    <div id="splash">
+      <div class="splash-inner">
+        <div class="splash-title">Tasker</div>
+        <p class="splash-subtitle">
+          A local-first kanban board for AI agent tasks. Assign tasks to agents,
+          configure models, and let
+          <code
+            style="
+              font-family: var(--font-mono);
+              background: #1a1a1a;
+              padding: 1px 5px;
+              font-size: 13px;
+            "
+            >tasker.js</code
+          >
+          handle execution. State is stored locally and embedded back into this
+          HTML file on save.
+        </p>
+        <div class="splash-steps">
+          <div class="splash-step">
+            <div class="step-num">1</div>
+            <div class="step-content">
+              <div class="step-label">Make sure Node.js is installed</div>
+              <span class="step-code">node --version</span>
+            </div>
+          </div>
+          <div class="splash-step">
+            <div class="step-num">2</div>
+            <div class="step-content">
+              <div class="step-label">
+                Run Tasker — it opens this page automatically
+              </div>
+              <span class="step-code">node tasker.js</span>
+            </div>
+          </div>
+          <div class="splash-step">
+            <div class="step-num">3</div>
+            <div class="step-content">
+              <div class="step-label">
+                Configure a model in Settings (gear icon, top-right)
+              </div>
+            </div>
+          </div>
+          <div class="splash-step">
+            <div class="step-num">4</div>
+            <div class="step-content">
+              <div class="step-label">
+                Create a task, set it to Ready, and hit Execute
+              </div>
+            </div>
+          </div>
+        </div>
+        <button class="btn-get-started" onclick="completeSetup()">
+          Get Started
+        </button>
+      </div>
+    </div>
+
+    <!-- ─── MAIN APP ───────────────────────────────────────── -->
+    <div id="app">
+      <!-- Top Bar -->
+      <div id="topbar">
+        <div id="topbar-left">
+          <span id="logo">Tasker</span>
+          <button
+            class="tab-btn active"
+            onclick="switchTab('tasks')"
+            id="tab-tasks"
+          >
+            Tasks
+          </button>
+          <button class="tab-btn" onclick="switchTab('agents')" id="tab-agents">
+            Agents
+          </button>
+          <button class="tab-btn" onclick="switchTab('log')" id="tab-log">
+            Log
+          </button>
+        </div>
+        <div id="topbar-right">
+          <div id="watcher-status" class="disconnected" onclick="toggleTasker()">
+            <span id="watcher-label">Tasker offline</span>
+            <div class="toggle-switch"><div class="toggle-knob"></div></div>
+          </div>
+          <button id="btn-settings" onclick="openSettings()" title="Settings">
+            ⚙
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Content -->
+      <div id="main">
+        <!-- BOARD -->
+        <div id="tasks-panel" class="tab-panel active">
+          <div id="tasks-columns">
+            <!-- columns injected by JS -->
+          </div>
+        </div>
+
+        <!-- AGENTS -->
+        <div id="agents-panel" class="tab-panel">
+          <div id="agents-panel-inner">
+            <div class="panel-header">
+              <div class="panel-title">Agents</div>
+              <button class="btn-primary" onclick="openAgentModal(null)">
+                + Add Agent
+              </button>
+            </div>
+            <div id="agents-grid"></div>
+          </div>
+        </div>
+
+        <!-- LOG -->
+        <div id="log-panel" class="tab-panel">
+          <div id="log-empty" class="hidden">No log entries yet.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── TASK DETAIL MODAL ────────────────────────────────── -->
+    <div
+      id="task-modal"
+      class="modal-overlay hidden"
+      onclick="handleModalOverlayClick(event, 'task-modal')"
+    >
+      <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title" id="task-modal-title">Task</div>
+          <button class="btn-close" onclick="closeModal('task-modal')">
+            ×
+          </button>
+        </div>
+        <div class="modal-body" id="task-modal-body">
+          <!-- injected by JS -->
+        </div>
+        <div class="modal-footer" id="task-modal-footer">
+          <!-- injected by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── AGENT MODAL ──────────────────────────────────────── -->
+    <div
+      id="agent-modal"
+      class="modal-overlay hidden"
+      onclick="handleModalOverlayClick(event, 'agent-modal')"
+    >
+      <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title" id="agent-modal-title">Agent</div>
+          <button class="btn-close" onclick="closeModal('agent-modal')">
+            ×
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Name</label>
+            <input
+              class="form-input"
+              id="ag-name"
+              type="text"
+              placeholder="Agent name"
+            />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Role / System Prompt</label>
+            <textarea
+              class="form-textarea mono"
+              id="ag-role"
+              rows="5"
+              placeholder="You are a..."
+            ></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Default Model</label>
+            <select
+              class="form-select"
+              id="ag-model"
+              title="Default Model"
+            ></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Default Temperature</label>
+            <div class="range-row">
+              <input
+                class="form-range"
+                id="ag-temp"
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                value="0.5"
+                title="Default Temperature"
+                oninput="
+                  document.getElementById('ag-temp-val').textContent =
+                    this.value
+                "
+              />
+              <span class="range-val" id="ag-temp-val">0.5</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Color</label>
+            <div class="color-input-row">
+              <input
+                type="color"
+                id="ag-color"
+                value="#5865f2"
+                title="Agent Color"
+              />
+              <div class="color-presets">
+                <div
+                  class="color-preset"
+                  style="background: #3b82f6"
+                  onclick="setAgentColor('#3b82f6')"
+                  title="Blue"
+                ></div>
+                <div
+                  class="color-preset"
+                  style="background: #10b981"
+                  onclick="setAgentColor('#10b981')"
+                  title="Green"
+                ></div>
+                <div
+                  class="color-preset"
+                  style="background: #f59e0b"
+                  onclick="setAgentColor('#f59e0b')"
+                  title="Amber"
+                ></div>
+                <div
+                  class="color-preset"
+                  style="background: #8b5cf6"
+                  onclick="setAgentColor('#8b5cf6')"
+                  title="Purple"
+                ></div>
+                <div
+                  class="color-preset"
+                  style="background: #ef4444"
+                  onclick="setAgentColor('#ef4444')"
+                  title="Red"
+                ></div>
+                <div
+                  class="color-preset"
+                  style="background: #5865f2"
+                  onclick="setAgentColor('#5865f2')"
+                  title="Indigo"
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" onclick="closeModal('agent-modal')">
+            Cancel
+          </button>
+          <button class="btn-primary" onclick="saveAgent()">Save Agent</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SETTINGS MODAL ───────────────────────────────────── -->
+    <div
+      id="settings-modal"
+      class="modal-overlay hidden"
+      onclick="handleModalOverlayClick(event, 'settings-modal')"
+    >
+      <div class="modal modal-wide" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title">Settings</div>
+          <button class="btn-close" onclick="closeModal('settings-modal')">
+            ×
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="settings-section">
+            <div class="settings-section-title">Working Directory</div>
+            <div class="form-group mb-0">
+              <input
+                class="form-input"
+                id="settings-workdir"
+                type="text"
+                placeholder="Leave blank to use the folder where tasker.js is running"
+              />
+              <div class="form-hint">
+                Where agents write files and run shell commands. Must be an
+                absolute path. Defaults to the directory containing tasker.js.
+              </div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">Models</div>
+            <div class="warning-banner">
+              ⚠ API keys are stored in plaintext in the HTML file. Do not share
+              this file with others.
+            </div>
+            <div id="models-list"></div>
+            <button
+              class="btn-secondary"
+              onclick="addModel()"
+              style="margin-top: 8px"
+            >
+              + Add Model
+            </button>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">Data</div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap">
+              <button class="btn-secondary" onclick="exportState()">
+                Export State JSON
+              </button>
+              <button class="btn-secondary" onclick="resetSetup()">
+                Reset Setup
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-primary" onclick="saveSettings()">
+            Save Settings
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── ADD TASK MODAL ────────────────────────────────────── -->
+    <div
+      id="addtask-modal"
+      class="modal-overlay hidden"
+      onclick="handleModalOverlayClick(event, 'addtask-modal')"
+    >
+      <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title" id="addtask-modal-title">Add Task</div>
+          <button class="btn-close" onclick="closeModal('addtask-modal')">
+            ×
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Title</label>
+            <input
+              class="form-input"
+              id="at-title"
+              type="text"
+              placeholder="Task title"
+            />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Description</label>
+            <textarea
+              class="form-textarea"
+              id="at-desc"
+              rows="4"
+              placeholder="Full description / prompt for the agent..."
+            ></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Agent</label>
+            <select
+              class="form-select"
+              id="at-agent"
+              title="Agent"
+              onchange="onAddTaskAgentChange(this.value)"
+            ></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Model</label>
+            <select class="form-select" id="at-model" title="Model"></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Temperature</label>
+            <div class="range-row">
+              <input
+                class="form-range"
+                id="at-temp"
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                value="0.7"
+                title="Temperature"
+                oninput="
+                  document.getElementById('at-temp-val').textContent =
+                    parseFloat(this.value).toFixed(1)
+                "
+              />
+              <span class="range-val" id="at-temp-val">0.7</span>
+            </div>
+            <div class="form-hint">
+              Controls output randomness. Lower = more precise and
+              deterministic. Higher = more varied and creative.
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Priority</label>
+            <div class="radio-group" id="at-priority-group">
+              <label class="radio-opt" onclick="selectPriority('low', this)">
+                <input type="radio" name="at-priority" value="low" />
+                <span class="radio-dot" style="background: #444"></span> Low
+              </label>
+              <label
+                class="radio-opt selected"
+                onclick="selectPriority('medium', this)"
+              >
+                <input type="radio" name="at-priority" value="medium" checked />
+                <span class="radio-dot" style="background: #f59e0b"></span>
+                Medium
+              </label>
+              <label class="radio-opt" onclick="selectPriority('high', this)">
+                <input type="radio" name="at-priority" value="high" />
+                <span class="radio-dot" style="background: #ef4444"></span> High
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" onclick="closeModal('addtask-modal')">
+            Cancel
+          </button>
+          <button class="btn-primary" onclick="saveNewTask()">Add Task</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // ─────────────────────────────────────────────────────────────────
+      // STATE MANAGEMENT
+      // ─────────────────────────────────────────────────────────────────
+
+      const LS_KEY = "tasker_state_v1";
+      const WATCHER_URL = "http://localhost:7842";
+      let state = {};
+      let eventSource = null;
+      let editingAgentId = null;
+      let editingTaskId = null;
+      let addTaskStatus = "backlog";
+      let dragSrcId = null;
+
+      function loadState() {
+        const embedded = JSON.parse(
+          document.getElementById("app-state").textContent,
+        );
+        const stored = localStorage.getItem(LS_KEY);
+        if (stored) {
+          try {
+            state = JSON.parse(stored);
+            // Merge in any missing top-level keys from embedded
+            if (!state.agents || state.agents.length === 0)
+              state.agents = embedded.agents;
+            if (!state.models || state.models.length === 0)
+              state.models = embedded.models;
+            if (!state.tasks) state.tasks = [];
+            if (!state.logs) state.logs = [];
+            if (state.writing === undefined) state.writing = false;
+          } catch (e) {
+            state = embedded;
+          }
+        } else {
+          // First load — use embedded
+          state = JSON.parse(JSON.stringify(embedded));
+          // Ensure IDs are stable
+          if (!state.agents[0].id) {
+            state.agents.forEach((a) => {
+              if (!a.id) a.id = uid();
+            });
+            state.models.forEach((m) => {
+              if (!m.id) m.id = uid();
+            });
+          }
+          // Link default model to agents
+          if (state.models.length > 0) {
+            state.agents.forEach((a) => {
+              if (!a.default_model_id) a.default_model_id = state.models[0].id;
+            });
+          }
+        }
+        persistState();
+      }
+
+      function persistState() {
+        localStorage.setItem(LS_KEY, JSON.stringify(state));
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // WATCHER CONNECTION (SSE)
+      // ─────────────────────────────────────────────────────────────────
+
+      function toggleTasker() {
+        const el = document.getElementById("watcher-status");
+        if (el.classList.contains("connected")) {
+          fetch(`${WATCHER_URL}/pause`, { method: "POST" }).catch(() => {});
+          setWatcherStatus("paused", "Tasker paused");
+        } else if (el.classList.contains("paused")) {
+          fetch(`${WATCHER_URL}/resume`, { method: "POST" }).catch(() => {});
+          setWatcherStatus("connected", "Tasker running");
+        }
+        // disconnected = process not running, toggle does nothing
+      }
+
+      function connectWatcher() {
+        if (eventSource) {
+          eventSource.close();
+          eventSource = null;
+        }
+        try {
+          eventSource = new EventSource(`${WATCHER_URL}/events`);
+          eventSource.onopen = () => {}; // state set by 'connected' SSE event
+          eventSource.onerror = () => {
+            setWatcherStatus("disconnected", "Tasker offline");
+            eventSource.close();
+            eventSource = null;
+            setTimeout(connectWatcher, 5000);
+          };
+          eventSource.onmessage = (e) => {
+            let ev;
+            try {
+              ev = JSON.parse(e.data);
+            } catch {
+              return;
+            }
+            handleWatcherEvent(ev);
+          };
+        } catch {
+          setWatcherStatus("disconnected", "Tasker offline");
+          setTimeout(connectWatcher, 5000);
+        }
+      }
+
+      function setWatcherStatus(cls, label) {
+        const el = document.getElementById("watcher-status");
+        const lbl = document.getElementById("watcher-label");
+        if (el) el.className = cls;
+        if (lbl) lbl.textContent = label;
+      }
+
+      function handleWatcherEvent(ev) {
+        if (ev.type === "connected") {
+          if (ev.paused) {
+            setWatcherStatus("paused", "Tasker paused");
+          } else {
+            setWatcherStatus("connected", "Tasker running");
+          }
+          return;
+        }
+        if (ev.type === "tasker_state") {
+          if (ev.paused) {
+            setWatcherStatus("paused", "Tasker paused");
+          } else {
+            setWatcherStatus("connected", "Tasker running");
+          }
+          return;
+        }
+        if (ev.type === "task_update") {
+          const task = state.tasks.find((t) => t.id === ev.task_id);
+          if (task) {
+            if (ev.status) task.status = ev.status;
+            task.updated_at = ev.timestamp || new Date().toISOString();
+            if (ev.activity) {
+              task.activity = task.activity || [];
+              task.activity.push(ev.activity);
+            }
+            persistState();
+            renderBoard();
+            if (editingTaskId === ev.task_id) {
+              if (ev.status) {
+                // Status changed — re-render full modal so footer updates
+                openTaskModal(ev.task_id);
+              } else {
+                // Chat-only update — just refresh the chat section
+                renderChatSection(task);
+              }
+            }
+          }
+        } else if (ev.type === "task_progress") {
+          const task = state.tasks.find((t) => t.id === ev.task_id);
+          if (task) {
+            task.progress = ev.progress;
+            persistState();
+            const bar = document.querySelector(`#card-${task.id} .card-progress-bar`);
+            if (bar) {
+              bar.classList.remove("indeterminate");
+              bar.style.width = ev.progress + "%";
+            }
+          }
+        } else if (ev.type === "new_task") {
+          state.tasks.push(ev.task);
+          addLog(ev.task.id, `Handoff task created: "${ev.task.title}"`);
+          persistState();
+          renderBoard();
+        } else if (ev.type === "log") {
+          addLog(ev.task_id || null, ev.message);
+          persistState();
+          if (document.getElementById("tab-log").classList.contains("active"))
+            renderLog();
+        }
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // UUID
+      // ─────────────────────────────────────────────────────────────────
+
+      function uid() {
+        return crypto.randomUUID();
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // DATE FORMATTING
+      // ─────────────────────────────────────────────────────────────────
+
+      function fmtDate(iso) {
+        if (!iso) return "";
+        const d = new Date(iso);
+        return d.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        });
+      }
+
+      function fmtTs(iso) {
+        if (!iso) return "";
+        const d = new Date(iso);
+        return d.toISOString().replace("T", " ").slice(0, 19);
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // TAB NAVIGATION
+      // ─────────────────────────────────────────────────────────────────
+
+      function switchTab(tab) {
+        document
+          .querySelectorAll(".tab-btn")
+          .forEach((b) => b.classList.remove("active"));
+        document
+          .querySelectorAll(".tab-panel")
+          .forEach((p) => p.classList.remove("active"));
+        document.getElementById("tab-" + tab).classList.add("active");
+        document.getElementById(tab + "-panel").classList.add("active");
+        if (tab === "agents") renderAgents();
+        if (tab === "log") renderLog();
+        if (tab === "tasks") renderBoard();
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // BOARD RENDERING
+      // ─────────────────────────────────────────────────────────────────
+
+      const COLUMNS = [
+        { id: "backlog", label: "Backlog" },
+        { id: "ready", label: "Ready" },
+        { id: "in_progress", label: "In Progress" },
+        { id: "in_review", label: "In Review" },
+        { id: "done", label: "Done" },
+      ];
+
+      function renderBoard() {
+        const container = document.getElementById("tasks-columns");
+        container.innerHTML = "";
+        COLUMNS.forEach((col) => {
+          const tasks = state.tasks.filter((t) => t.status === col.id);
+          const div = document.createElement("div");
+          div.className = "column";
+          div.innerHTML = `
+      <div class="column-header">
+        <div class="column-title">
+          ${col.label}
+          <span class="col-count">${tasks.length}</span>
+        </div>
+        <button class="btn-add-task" onclick="openAddTask('${col.id}')" title="Add task">+</button>
+      </div>
+      <div class="column-cards" id="col-${col.id}"
+        ondragover="onDragOver(event, '${col.id}')"
+        ondragleave="onDragLeave(event, '${col.id}')"
+        ondrop="onDrop(event, '${col.id}')">
+        ${tasks.map((t) => renderCard(t)).join("")}
+      </div>
+    `;
+          container.appendChild(div);
+        });
+      }
+
+      function renderCard(task) {
+        const agent = state.agents.find((a) => a.id === task.agent_id);
+        const model = state.models.find((m) => m.id === task.model_id);
+        const color = agent ? agent.color : "#333";
+        const priorityClass = task.priority || "medium";
+        const agentName = agent ? agent.name : "—";
+        const modelName = model ? model.name : "—";
+        return `
+    <div class="task-card" id="card-${task.id}"
+      style="border-left-color: ${color}"
+      draggable="true"
+      ondragstart="onDragStart(event, '${task.id}')"
+      ondragend="onDragEnd(event, '${task.id}')"
+      onclick="openTaskModal('${task.id}')">
+      <div class="card-top">
+        <div class="card-title">${escHtml(task.title)}</div>
+        <div class="priority-dot ${priorityClass}" title="${priorityClass} priority"></div>
+      </div>
+      ${task.description ? `<div class="card-desc">${escHtml(task.description)}</div>` : ""}
+      <div class="card-meta">
+        <div class="card-agent-info">
+          <span class="agent-dot" style="background:${color}"></span>
+          <span class="card-agent-name">${escHtml(agentName)}</span>
+          ${model ? `<span style="color:var(--text-tertiary)">·</span><span style="color:var(--text-tertiary);font-size:11px;">${escHtml(modelName)}</span>` : ""}
+        </div>
+        <span class="card-date">${fmtDate(task.created_at)}</span>
+      </div>
+      ${task.status === "in_progress" ? `<div class="card-progress"><div class="card-progress-bar${task.progress !== undefined ? `" style="width:${task.progress}%` : " indeterminate"}"></div></div>` : ""}
+    </div>
+  `;
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // DRAG AND DROP
+      // ─────────────────────────────────────────────────────────────────
+
+      function onDragStart(e, id) {
+        dragSrcId = id;
+        e.dataTransfer.effectAllowed = "move";
+        setTimeout(() => {
+          const el = document.getElementById("card-" + id);
+          if (el) el.classList.add("dragging");
+        }, 0);
+      }
+
+      function onDragEnd(e, id) {
+        const el = document.getElementById("card-" + id);
+        if (el) el.classList.remove("dragging");
+        document
+          .querySelectorAll(".column-cards")
+          .forEach((c) => c.classList.remove("drag-over"));
+      }
+
+      function onDragOver(e, colId) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        const col = document.getElementById("col-" + colId);
+        if (col) col.classList.add("drag-over");
+      }
+
+      function onDragLeave(e, colId) {
+        const col = document.getElementById("col-" + colId);
+        if (col) col.classList.remove("drag-over");
+      }
+
+      function onDrop(e, colId) {
+        e.preventDefault();
+        document
+          .querySelectorAll(".column-cards")
+          .forEach((c) => c.classList.remove("drag-over"));
+        if (!dragSrcId) return;
+        const task = state.tasks.find((t) => t.id === dragSrcId);
+        if (!task || task.status === colId) return;
+        const oldStatus = task.status;
+        task.status = colId;
+        task.updated_at = new Date().toISOString();
+        task.activity = task.activity || [];
+        task.activity.push({
+          timestamp: new Date().toISOString(),
+          type: "moved",
+          content: `Moved from ${oldStatus} to ${colId}`,
+        });
+        addLog(
+          task.id,
+          `Task "${task.title}" moved from ${oldStatus} to ${colId}`,
+        );
+        persistState();
+
+        renderBoard();
+        dragSrcId = null;
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // TASK MODAL
+      // ─────────────────────────────────────────────────────────────────
+
+      function openTaskModal(taskId) {
+        editingTaskId = taskId;
+        const task = state.tasks.find((t) => t.id === taskId);
+        if (!task) return;
+        document.getElementById("task-modal-title").textContent = "Task Detail";
+        renderTaskModalBody(task);
+        openModal("task-modal");
+      }
+
+      function renderTaskModalBody(task) {
+        const body = document.getElementById("task-modal-body");
+        const footer = document.getElementById("task-modal-footer");
+        const agentOptions = [
+          '<option value="">— No agent —</option>',
+          ...state.agents.map(
+            (a) =>
+              `<option value="${a.id}" ${a.id === task.agent_id ? "selected" : ""}>${escHtml(a.name)}</option>`,
+          ),
+        ].join("");
+        const modelOptions = [
+          '<option value="">— No model —</option>',
+          ...state.models.map(
+            (m) =>
+              `<option value="${m.id}" ${m.id === task.model_id ? "selected" : ""}>${escHtml(m.name)}</option>`,
+          ),
+        ].join("");
+        body.innerHTML = `
+    <div class="form-group">
+      <label class="form-label">Title</label>
+      <input class="form-input" id="td-title" type="text" value="${escAttr(task.title)}">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description</label>
+      <textarea class="form-textarea" id="td-desc" rows="5">${escHtml(task.description || "")}</textarea>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group mb-0">
+        <label class="form-label">Agent</label>
+        <select class="form-select" id="td-agent">${agentOptions}</select>
+      </div>
+      <div class="form-group mb-0">
+        <label class="form-label">Model</label>
+        <select class="form-select" id="td-model">${modelOptions}</select>
+      </div>
+    </div>
+    <div class="form-group" style="margin-top:12px;">
+      <label class="form-label">Temperature</label>
+      <div class="range-row">
+        <input class="form-range" id="td-temp" type="range" min="0" max="1" step="0.1" value="${task.temperature !== undefined ? task.temperature : 0.7}" title="Temperature" oninput="document.getElementById('td-temp-val').textContent=parseFloat(this.value).toFixed(1)">
+        <span class="range-val" id="td-temp-val">${task.temperature !== undefined ? parseFloat(task.temperature).toFixed(1) : "0.7"}</span>
+      </div>
+      <div class="form-hint">Controls output randomness. Lower = more precise and deterministic. Higher = more varied and creative.</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Priority</label>
+      <div class="radio-group" id="td-priority-group">
+        <label class="radio-opt ${task.priority === "low" ? "selected" : ""}" onclick="selectPriorityTd('low', this)">
+          <input type="radio" name="td-priority" value="low" ${task.priority === "low" ? "checked" : ""}>
+          <span class="radio-dot" style="background:#444"></span> Low
+        </label>
+        <label class="radio-opt ${!task.priority || task.priority === "medium" ? "selected" : ""}" onclick="selectPriorityTd('medium', this)">
+          <input type="radio" name="td-priority" value="medium" ${!task.priority || task.priority === "medium" ? "checked" : ""}>
+          <span class="radio-dot" style="background:#f59e0b"></span> Medium
+        </label>
+        <label class="radio-opt ${task.priority === "high" ? "selected" : ""}" onclick="selectPriorityTd('high', this)">
+          <input type="radio" name="td-priority" value="high" ${task.priority === "high" ? "checked" : ""}>
+          <span class="radio-dot" style="background:#ef4444"></span> High
+        </label>
+      </div>
+    </div>
+
+    <div id="task-chat-wrapper"></div>
+  `;
+
+        renderChatSection(task);
+
+        // Footer
+        footer.innerHTML = "";
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "btn-danger";
+        deleteBtn.textContent = "Delete";
+        deleteBtn.onclick = () => deleteTask(task.id);
+        footer.appendChild(deleteBtn);
+
+        const spacer = document.createElement("div");
+        spacer.style.flex = "1";
+        footer.appendChild(spacer);
+
+        if (task.status === "ready") {
+          const execBtn = document.createElement("button");
+          execBtn.className = "btn-execute";
+          execBtn.textContent = "Execute";
+          execBtn.onclick = () => executeTask(task.id);
+          footer.appendChild(execBtn);
+        }
+
+        if (task.status === "in_review") {
+          const doneBtn = document.createElement("button");
+          doneBtn.className = "btn-move-done";
+          doneBtn.textContent = "Move to Done";
+          doneBtn.onclick = () => moveToDone(task.id);
+          footer.appendChild(doneBtn);
+        }
+
+        const saveBtn = document.createElement("button");
+        saveBtn.className = "btn-primary";
+        saveBtn.textContent = "Save Changes";
+        saveBtn.onclick = () => saveTaskChanges(task.id);
+        footer.appendChild(saveBtn);
+      }
+
+      function saveTaskChanges(taskId) {
+        const task = state.tasks.find((t) => t.id === taskId);
+        if (!task) return;
+        task.title =
+          document.getElementById("td-title").value.trim() || task.title;
+        task.description = document.getElementById("td-desc").value.trim();
+        task.agent_id = document.getElementById("td-agent").value || null;
+        task.model_id = document.getElementById("td-model").value || null;
+        task.temperature = parseFloat(document.getElementById("td-temp").value);
+        const pri = document.querySelector('input[name="td-priority"]:checked');
+        task.priority = pri ? pri.value : "medium";
+        task.updated_at = new Date().toISOString();
+        task.activity = task.activity || [];
+        task.activity.push({
+          timestamp: new Date().toISOString(),
+          type: "moved",
+          content: "Task updated",
+        });
+        persistState();
+
+        closeModal("task-modal");
+        renderBoard();
+      }
+
+      function deleteTask(taskId) {
+        if (!confirm("Delete this task?")) return;
+        state.tasks = state.tasks.filter((t) => t.id !== taskId);
+        addLog(taskId, "Task deleted");
+        persistState();
+
+        closeModal("task-modal");
+        renderBoard();
+      }
+
+      async function executeTask(taskId) {
+        const task = state.tasks.find((t) => t.id === taskId);
+        if (!task) return;
+        const agent = state.agents.find((a) => a.id === task.agent_id);
+        const model = state.models.find((m) => m.id === task.model_id);
+        const agentName = agent ? agent.name : "unassigned";
+        const modelName = model ? model.name : "no model";
+        if (!agent) {
+          alert("Assign an agent to this task before executing.");
+          return;
+        }
+        if (!model) {
+          alert("Assign a model to this task before executing.");
+          return;
+        }
+        if (
+          !confirm(
+            `Execute "${task.title}" with ${agentName} via ${modelName}?`,
+          )
+        )
+          return;
+
+        // Optimistic UI update
+        task.status = "in_progress";
+        task.updated_at = new Date().toISOString();
+        task.activity = task.activity || [];
+        task.activity.push({
+          timestamp: new Date().toISOString(),
+          type: "executed",
+          content: `Sent to ${agentName} via ${modelName}`,
+        });
+        addLog(taskId, `Executing "${task.title}" with ${agentName}`);
+        persistState();
+        closeModal("task-modal");
+        renderBoard();
+
+        try {
+          const res = await fetch(`${WATCHER_URL}/execute`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              task,
+              agent,
+              model,
+              agents: state.agents,
+              workdir: state.workdir || "",
+            }),
+          });
+          if (res.status === 503) throw new Error("Tasker is paused — resume it from the toggle first.");
+          if (!res.ok) throw new Error(`Tasker returned ${res.status}`);
+        } catch (err) {
+          // Tasker not running or paused — roll back to ready
+          task.status = "ready";
+          task.activity.push({
+            timestamp: new Date().toISOString(),
+            type: "output",
+            content: `Error: Could not reach Tasker — is "node tasker.js" running? (${err.message})`,
+          });
+          persistState();
+          renderBoard();
+        }
+      }
+
+      function selectPriorityTd(val, el) {
+        document
+          .querySelectorAll("#td-priority-group .radio-opt")
+          .forEach((o) => o.classList.remove("selected"));
+        el.classList.add("selected");
+        const inp = el.querySelector('input[type="radio"]');
+        if (inp) inp.checked = true;
+      }
+
+      function moveToDone(taskId) {
+        const task = state.tasks.find((t) => t.id === taskId);
+        if (!task) return;
+        task.status = "done";
+        task.updated_at = new Date().toISOString();
+        task.activity = task.activity || [];
+        task.activity.push({ timestamp: new Date().toISOString(), type: "moved", content: "Moved to Done" });
+        addLog(taskId, `Task "${task.title}" moved to Done`);
+        persistState();
+        closeModal("task-modal");
+        renderBoard();
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // CHAT THREAD
+      // ─────────────────────────────────────────────────────────────────
+
+      function buildChatSectionHTML(task) {
+        const activity = (task.activity || []).slice();
+        const msgs = activity.map((a) => {
+          if (a.type === "chat_user") {
+            return `<div class="chat-msg user">
+              <div class="chat-bubble">${escHtml(a.content)}</div>
+              <span class="chat-meta">${fmtTs(a.timestamp)}</span>
+            </div>`;
+          } else if (a.type === "output" || a.type === "chat_agent") {
+            return `<div class="chat-msg agent">
+              <div class="chat-bubble">${escHtml(a.content)}</div>
+              <span class="chat-meta">${fmtTs(a.timestamp)}</span>
+            </div>`;
+          } else {
+            return `<div class="chat-msg system">
+              <div class="chat-bubble">${escHtml(a.type)}: ${escHtml(a.content)}</div>
+            </div>`;
+          }
+        }).join("");
+
+        return `
+          <div class="activity-section">
+            <div class="activity-title">Activity &amp; Chat</div>
+            <div class="chat-messages" id="chat-messages-${task.id}">
+              ${msgs || '<div style="color:var(--text-tertiary);font-size:11px;font-family:var(--font-mono);padding:6px 0">No activity yet.</div>'}
+            </div>
+            <div class="chat-input-row">
+              <textarea class="chat-input" id="chat-input-${task.id}" placeholder="Message the agent…" rows="1"
+                onkeydown="handleChatKeydown(event,'${task.id}')"></textarea>
+              <button class="btn-send" id="chat-send-${task.id}" onclick="sendChatMessage('${task.id}')">Send</button>
+            </div>
+          </div>
+        `;
+      }
+
+      function renderChatSection(task) {
+        const wrapper = document.getElementById("task-chat-wrapper");
+        if (!wrapper) return;
+        wrapper.innerHTML = buildChatSectionHTML(task);
+        const msgs = document.getElementById("chat-messages-" + task.id);
+        if (msgs) msgs.scrollTop = msgs.scrollHeight;
+      }
+
+      function handleChatKeydown(e, taskId) {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          sendChatMessage(taskId);
+        }
+      }
+
+      async function sendChatMessage(taskId) {
+        const msgEl = document.getElementById("chat-input-" + taskId);
+        const sendBtn = document.getElementById("chat-send-" + taskId);
+        if (!msgEl) return;
+        const msg = msgEl.value.trim();
+        if (!msg) return;
+
+        const task = state.tasks.find((t) => t.id === taskId);
+        if (!task) return;
+
+        msgEl.value = "";
+        if (sendBtn) sendBtn.disabled = true;
+
+        const now = new Date().toISOString();
+        task.activity = task.activity || [];
+        task.activity.push({ timestamp: now, type: "chat_user", content: msg });
+        task.updated_at = now;
+        persistState();
+        renderChatSection(task);
+
+        const agent = state.agents.find((a) => a.id === task.agent_id);
+        const model = state.models.find((m) => m.id === task.model_id);
+
+        if (!agent || !model) {
+          task.activity.push({
+            timestamp: new Date().toISOString(),
+            type: "chat_agent",
+            content: "No agent or model assigned to this task.",
+          });
+          persistState();
+          renderChatSection(task);
+          if (sendBtn) sendBtn.disabled = false;
+          return;
+        }
+
+        try {
+          const res = await fetch(`${WATCHER_URL}/chat`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ task_id: taskId, task, agent, model, workdir: state.workdir || "" }),
+          });
+          if (!res.ok) throw new Error(`Tasker returned ${res.status}`);
+          // Response arrives via SSE — handleWatcherEvent will call renderChatSection
+        } catch (err) {
+          task.activity.push({
+            timestamp: new Date().toISOString(),
+            type: "chat_agent",
+            content: `Could not reach Tasker: ${err.message}`,
+          });
+          persistState();
+          renderChatSection(task);
+        }
+
+        if (sendBtn) sendBtn.disabled = false;
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // ADD TASK MODAL
+      // ─────────────────────────────────────────────────────────────────
+
+      function openAddTask(status) {
+        addTaskStatus = status || "backlog";
+        document.getElementById("addtask-modal-title").textContent =
+          "Add Task — " + colLabel(status);
+        document.getElementById("at-title").value = "";
+        document.getElementById("at-desc").value = "";
+        setAddTaskTemp(0.7);
+        document
+          .getElementById("at-priority-group")
+          .querySelectorAll(".radio-opt")
+          .forEach((o) => {
+            o.classList.remove("selected");
+            const inp = o.querySelector('input[type="radio"]');
+            if (inp && inp.value === "medium") {
+              o.classList.add("selected");
+              inp.checked = true;
+            }
+          });
+        populateAgentSelect("at-agent", null);
+        populateModelSelect("at-model", null);
+        openModal("addtask-modal");
+      }
+
+      function setAddTaskTemp(val) {
+        const t = parseFloat(val).toFixed(1);
+        document.getElementById("at-temp").value = t;
+        document.getElementById("at-temp-val").textContent = t;
+      }
+
+      function onAddTaskAgentChange(agentId) {
+        const agent = state.agents.find((a) => a.id === agentId);
+        if (agent && agent.default_temperature !== undefined)
+          setAddTaskTemp(agent.default_temperature);
+        // Also update model select to agent's default model
+        const modelId = agent ? agent.default_model_id : null;
+        populateModelSelect("at-model", modelId);
+      }
+
+      function colLabel(id) {
+        const c = COLUMNS.find((x) => x.id === id);
+        return c ? c.label : id;
+      }
+
+      function saveNewTask() {
+        const title = document.getElementById("at-title").value.trim();
+        if (!title) {
+          alert("Please enter a task title.");
+          return;
+        }
+        const pri = document.querySelector('input[name="at-priority"]:checked');
+        const now = new Date().toISOString();
+        const task = {
+          id: uid(),
+          title,
+          description: document.getElementById("at-desc").value.trim(),
+          agent_id: document.getElementById("at-agent").value || null,
+          model_id: document.getElementById("at-model").value || null,
+          temperature: parseFloat(document.getElementById("at-temp").value),
+          priority: pri ? pri.value : "medium",
+          status: addTaskStatus,
+          created_at: now,
+          updated_at: now,
+          activity: [
+            { timestamp: now, type: "created", content: "Task created" },
+          ],
+        };
+        state.tasks.push(task);
+        addLog(task.id, `Task "${task.title}" created in ${addTaskStatus}`);
+        persistState();
+
+        closeModal("addtask-modal");
+        renderBoard();
+      }
+
+      function selectPriority(val, el) {
+        document
+          .querySelectorAll("#at-priority-group .radio-opt")
+          .forEach((o) => o.classList.remove("selected"));
+        el.classList.add("selected");
+        const inp = el.querySelector('input[type="radio"]');
+        if (inp) inp.checked = true;
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // AGENTS
+      // ─────────────────────────────────────────────────────────────────
+
+      function renderAgents() {
+        const grid = document.getElementById("agents-grid");
+        if (state.agents.length === 0) {
+          grid.innerHTML =
+            '<p style="color:var(--text-secondary)">No agents yet. Add one above.</p>';
+          return;
+        }
+        grid.innerHTML = state.agents
+          .map((a) => {
+            const model = state.models.find((m) => m.id === a.default_model_id);
+            return `
+      <div class="agent-card" style="border-left-color:${a.color}">
+        <div class="agent-card-top">
+          <div class="agent-color-swatch" style="background:${a.color}"></div>
+          <div class="agent-name">${escHtml(a.name)}</div>
+        </div>
+        <div class="agent-role-preview">${escHtml(a.role)}</div>
+        <div class="agent-meta-row">
+          <span>Temp: <span style="color:var(--text-primary);font-family:var(--font-mono)">${a.default_temperature}</span></span>
+          <span>Model: <span style="color:var(--text-primary)">${model ? escHtml(model.name) : "—"}</span></span>
+        </div>
+        <div class="agent-card-actions">
+          <button class="btn-secondary" onclick="openAgentModal('${a.id}')" style="font-size:12px;padding:4px 10px;">Edit</button>
+          <button class="btn-danger" onclick="deleteAgent('${a.id}')">Delete</button>
+        </div>
+      </div>
+    `;
+          })
+          .join("");
+      }
+
+      function openAgentModal(agentId) {
+        editingAgentId = agentId;
+        const ag = agentId ? state.agents.find((a) => a.id === agentId) : null;
+        document.getElementById("agent-modal-title").textContent = ag
+          ? "Edit Agent"
+          : "Add Agent";
+        document.getElementById("ag-name").value = ag ? ag.name : "";
+        document.getElementById("ag-role").value = ag ? ag.role : "";
+        document.getElementById("ag-temp").value = ag
+          ? ag.default_temperature
+          : 0.5;
+        document.getElementById("ag-temp-val").textContent = ag
+          ? ag.default_temperature
+          : 0.5;
+        const col = ag ? ag.color : "#5865f2";
+        document.getElementById("ag-color").value = col;
+        updateColorPresets(col);
+        populateModelSelect("ag-model", ag ? ag.default_model_id : null);
+        openModal("agent-modal");
+      }
+
+      function setAgentColor(hex) {
+        document.getElementById("ag-color").value = hex;
+        updateColorPresets(hex);
+      }
+
+      function updateColorPresets(selected) {
+        document.querySelectorAll(".color-preset").forEach((el) => {
+          const bg = el.style.background;
+          el.classList.toggle("selected", bg === selected);
+        });
+      }
+
+      function saveAgent() {
+        const name = document.getElementById("ag-name").value.trim();
+        if (!name) {
+          alert("Please enter an agent name.");
+          return;
+        }
+        const data = {
+          name,
+          role: document.getElementById("ag-role").value.trim(),
+          default_model_id: document.getElementById("ag-model").value || null,
+          default_temperature: parseFloat(
+            document.getElementById("ag-temp").value,
+          ),
+          color: document.getElementById("ag-color").value,
+        };
+        if (editingAgentId) {
+          const idx = state.agents.findIndex((a) => a.id === editingAgentId);
+          if (idx !== -1) Object.assign(state.agents[idx], data);
+        } else {
+          state.agents.push({ id: uid(), ...data });
+        }
+        persistState();
+
+        closeModal("agent-modal");
+        renderAgents();
+        renderBoard();
+      }
+
+      function deleteAgent(agentId) {
+        if (
+          !confirm(
+            "Delete this agent? Tasks assigned to it will lose their agent assignment.",
+          )
+        )
+          return;
+        state.agents = state.agents.filter((a) => a.id !== agentId);
+        state.tasks.forEach((t) => {
+          if (t.agent_id === agentId) t.agent_id = null;
+        });
+        persistState();
+
+        renderAgents();
+        renderBoard();
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // LOG
+      // ─────────────────────────────────────────────────────────────────
+
+      function renderLog() {
+        const panel = document.getElementById("log-panel");
+        const emptyEl = document.getElementById("log-empty");
+        // Remove existing entries but keep empty
+        Array.from(panel.children).forEach((c) => {
+          if (c.id !== "log-empty") c.remove();
+        });
+        const logs = (state.logs || []).slice().reverse();
+        if (logs.length === 0) {
+          emptyEl.classList.remove("hidden");
+          return;
+        }
+        emptyEl.classList.add("hidden");
+        logs.forEach((entry) => {
+          const div = document.createElement("div");
+          div.className = "log-entry";
+          const task = entry.task_id
+            ? state.tasks.find((t) => t.id === entry.task_id)
+            : null;
+          div.innerHTML = `
+      <span class="log-ts">${fmtTs(entry.timestamp)}</span>
+      <span class="log-msg ${task ? "task-ref" : ""}">${escHtml(entry.message)}</span>
+    `;
+          panel.appendChild(div);
+        });
+      }
+
+      function addLog(taskId, message) {
+        state.logs = state.logs || [];
+        state.logs.push({
+          timestamp: new Date().toISOString(),
+          task_id: taskId || null,
+          message,
+        });
+        // Keep last 1000 entries
+        if (state.logs.length > 1000) state.logs = state.logs.slice(-1000);
+      }
+
+      // Auto-refresh log tab every 5 seconds
+      setInterval(() => {
+        if (document.getElementById("tab-log").classList.contains("active")) {
+          renderLog();
+        }
+      }, 5000);
+
+      // ─────────────────────────────────────────────────────────────────
+      // SETTINGS
+      // ─────────────────────────────────────────────────────────────────
+
+      function openSettings() {
+        renderModelsList();
+        document.getElementById("settings-workdir").value = state.workdir || "";
+        openModal("settings-modal");
+      }
+
+      function renderModelsList() {
+        const container = document.getElementById("models-list");
+        container.innerHTML = "";
+        state.models.forEach((m, i) => {
+          const div = document.createElement("div");
+          div.className = "model-row";
+          div.innerHTML = `
+      <div class="model-row-header">
+        <div class="model-row-name">${escHtml(m.name)}</div>
+        <button class="btn-danger" onclick="removeModel('${m.id}')">Remove</button>
+      </div>
+      <div class="model-fields">
+        <div class="form-group full-width">
+          <label class="form-label">Name</label>
+          <input class="form-input" data-model="${m.id}" data-field="name" type="text" value="${escAttr(m.name)}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Provider</label>
+          <select class="form-select" data-model="${m.id}" data-field="provider">
+            <option value="anthropic" ${m.provider === "anthropic" ? "selected" : ""}>Anthropic</option>
+            <option value="openai" ${m.provider === "openai" ? "selected" : ""}>OpenAI</option>
+            <option value="ollama" ${m.provider === "ollama" ? "selected" : ""}>Ollama</option>
+            <option value="custom" ${m.provider === "custom" ? "selected" : ""}>Custom</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Model String</label>
+          <input class="form-input" data-model="${m.id}" data-field="model_string" type="text" value="${escAttr(m.model_string)}">
+        </div>
+        <div class="form-group full-width">
+          <label class="form-label">Endpoint URL</label>
+          <input class="form-input" data-model="${m.id}" data-field="endpoint" type="text" value="${escAttr(m.endpoint)}">
+        </div>
+        <div class="form-group full-width">
+          <label class="form-label">API Key</label>
+          <input class="form-input" data-model="${m.id}" data-field="api_key" type="password" value="${escAttr(m.api_key || "")}">
+        </div>
+      </div>
+    `;
+          container.appendChild(div);
+        });
+      }
+
+      function addModel() {
+        const m = {
+          id: uid(),
+          name: "New Model",
+          provider: "anthropic",
+          endpoint: "https://api.anthropic.com/v1/messages",
+          api_key: "",
+          model_string: "",
+        };
+        state.models.push(m);
+        renderModelsList();
+      }
+
+      function removeModel(id) {
+        if (!confirm("Remove this model?")) return;
+        state.models = state.models.filter((m) => m.id !== id);
+        state.tasks.forEach((t) => {
+          if (t.model_id === id) t.model_id = null;
+        });
+        state.agents.forEach((a) => {
+          if (a.default_model_id === id) a.default_model_id = null;
+        });
+        renderModelsList();
+      }
+
+      function saveSettings() {
+        state.workdir = document
+          .getElementById("settings-workdir")
+          .value.trim();
+        // Collect all model field values
+        document.querySelectorAll("[data-model]").forEach((el) => {
+          const modelId = el.dataset.model;
+          const field = el.dataset.field;
+          const m = state.models.find((x) => x.id === modelId);
+          if (m && field) m[field] = el.value;
+        });
+        persistState();
+
+        closeModal("settings-modal");
+      }
+
+      function resetSetup() {
+        if (
+          !confirm(
+            "Reset setup? The splash screen will show again on next load.",
+          )
+        )
+          return;
+        state.setup_complete = false;
+        persistState();
+        location.reload();
+      }
+
+      function exportState() {
+        const blob = new Blob([JSON.stringify(state, null, 2)], {
+          type: "application/json",
+        });
+        const url = URL.createObjectURL(blob);
+        const a = Object.assign(document.createElement("a"), {
+          href: url,
+          download: "tasker-state.json",
+        });
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // SETUP / SPLASH
+      // ─────────────────────────────────────────────────────────────────
+
+      function completeSetup() {
+        state.setup_complete = true;
+        persistState();
+
+        document.getElementById("splash").classList.add("hidden");
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // MODAL HELPERS
+      // ─────────────────────────────────────────────────────────────────
+
+      function openModal(id) {
+        document.getElementById(id).classList.remove("hidden");
+      }
+
+      function closeModal(id) {
+        document.getElementById(id).classList.add("hidden");
+      }
+
+      function handleModalOverlayClick(e, id) {
+        if (e.target === document.getElementById(id)) closeModal(id);
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // SELECT HELPERS
+      // ─────────────────────────────────────────────────────────────────
+
+      function populateAgentSelect(selectId, selectedId) {
+        const sel = document.getElementById(selectId);
+        sel.innerHTML =
+          '<option value="">— No agent —</option>' +
+          state.agents
+            .map(
+              (a) =>
+                `<option value="${a.id}" ${a.id === selectedId ? "selected" : ""}>${escHtml(a.name)}</option>`,
+            )
+            .join("");
+      }
+
+      function populateModelSelect(selectId, selectedId) {
+        const sel = document.getElementById(selectId);
+        sel.innerHTML =
+          '<option value="">— No model —</option>' +
+          state.models
+            .map(
+              (m) =>
+                `<option value="${m.id}" ${m.id === selectedId ? "selected" : ""}>${escHtml(m.name)}</option>`,
+            )
+            .join("");
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // ESCAPE HELPERS
+      // ─────────────────────────────────────────────────────────────────
+
+      function escHtml(str) {
+        if (!str) return "";
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#x27;");
+      }
+
+      function escAttr(str) {
+        return escHtml(str);
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // KEYBOARD SHORTCUTS
+      // ─────────────────────────────────────────────────────────────────
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          [
+            "task-modal",
+            "agent-modal",
+            "settings-modal",
+            "addtask-modal",
+          ].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el && !el.classList.contains("hidden")) closeModal(id);
+          });
+        }
+      });
+
+      // ─────────────────────────────────────────────────────────────────
+      // INIT
+      // ─────────────────────────────────────────────────────────────────
+
+      (function init() {
+        loadState();
+        if (state.setup_complete) {
+          document.getElementById("splash").classList.add("hidden");
+        }
+        renderBoard();
+        connectWatcher();
+      })();
+    </script>
+  </body>
+</html>
