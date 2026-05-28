@@ -7,23 +7,22 @@ A local-first kanban board for Claude Code agents. Create tasks on the board, ru
 ## Requirements
 
 - Node.js 18 or later (no `npm install` needed)
-- Claude Code
+- [VS Code](https://code.visualstudio.com/download)
+- [Claude Code](https://claude.com/product/claude-code)
 
-## Getting started
+## Getting Started
 
-1. Drop the `Tasker/` folder anywhere on your machine.
-
-2. Run the installer from that directory:
+1. Download the [latest release](https://github.com/Emberstone-Studio/Tasker/releases) (zip file).
+2. Drop the `Tasker/` folder anywhere on your machine.
+3. Run the installer from that directory:
    ```
    node tasker.js
    ```
    This installs five Claude Code skills into `~/.claude/commands/` and prints the next steps. It does **not** start a server.
-
-3. Reload your VS Code window so the new skills are available:
+4. Reload your VS Code window so the new skills are available:
    - Open the command palette (`Ctrl+Shift+P` on Windows/Linux, `Cmd+Shift+P` on macOS)
    - Run **Reload Window**
-
-4. Run `/tasker` in Claude Code. This starts the server, opens the board in your browser, and begins the scan loop.
+5. Run `/tasker` in Claude Code. This starts the server, opens the board in your browser, and begins the scan loop.
 
 ## Board
 
