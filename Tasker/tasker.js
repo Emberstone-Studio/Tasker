@@ -58,18 +58,59 @@ const DEFAULT_STATE = {
 
 const { execSync } = require("child_process");
 let CLAUDE_BIN = process.env.CLAUDE_BIN || null;
+let CLAUDE_SHELL = false;
+
 if (!CLAUDE_BIN) {
-  try {
-    CLAUDE_BIN = execSync("which claude", {
-      shell: true,
-      encoding: "utf8",
-    }).trim();
-  } catch {
-    CLAUDE_BIN = "npx";
+  if (process.platform === "win32") {
+    // On Windows, find claude.cmd then derive the native claude.exe so we can
+    // spawn it directly without shell:true — avoids cmd.exe splitting args on
+    // newlines or special characters in the system prompt / message.
+    try {
+      const cmdPath = execSync("where.exe claude.cmd", { encoding: "utf8" })
+        .split(/\r?\n/)[0]
+        .trim();
+      const exePath = path.join(
+        path.dirname(cmdPath),
+        "node_modules",
+        "@anthropic-ai",
+        "claude-code",
+        "bin",
+        "claude.exe"
+      );
+      if (fs.existsSync(exePath)) {
+        CLAUDE_BIN = exePath;
+      } else {
+        CLAUDE_BIN = cmdPath;
+        CLAUDE_SHELL = true;
+      }
+    } catch {
+      CLAUDE_BIN = "claude.cmd";
+      CLAUDE_SHELL = true;
+    }
+  } else {
+    // Mac/Linux: augment PATH for non-login shells (nvm, volta, homebrew).
+    const home = os.homedir();
+    const extraPaths = [
+      `${home}/.volta/bin`,
+      `/opt/homebrew/bin`,
+      `/usr/local/bin`,
+      `${home}/.local/bin`,
+    ];
+    try {
+      const nvmDir = process.env.NVM_DIR || `${home}/.nvm`;
+      const alias = fs.readFileSync(`${nvmDir}/alias/default`, "utf8").trim();
+      extraPaths.unshift(`${nvmDir}/versions/node/${alias}/bin`);
+    } catch {}
+    process.env.PATH = [...extraPaths, process.env.PATH || ""].join(":");
+    try {
+      CLAUDE_BIN = execSync("which claude", { shell: true, encoding: "utf8" })
+        .trim()
+        .split(/\r?\n/)[0];
+    } catch {
+      CLAUDE_BIN = null;
+    }
   }
 }
-const CLAUDE_ARGS_PREFIX =
-  CLAUDE_BIN === "npx" ? ["@anthropic-ai/claude-code"] : [];
 
 // ─── State ────────────────────────────────────────────────────────
 
@@ -295,18 +336,22 @@ const server = http.createServer((req, res) => {
 
       const tasks =
         ((appState && appState.tasks) || [])
-          .map((t) => `  - [${t.status}] ${t.title}`)
-          .join("\n") || "  (no tasks)";
+          .map((t) => `[${t.status}] ${t.title}`)
+          .join(", ") || "(no tasks)";
       const agents =
         ((appState && appState.agents) || []).map((a) => a.name).join(", ") ||
         "(none)";
 
+      // Keep system prompt on one line — newlines break cmd.exe arg parsing on Windows.
       const systemPrompt =
         `You are a helpful assistant embedded in Tasker, a Claude Code task management board. ` +
         `You have full tool access and can act on the board by calling the Tasker REST API at http://localhost:${PORT}. ` +
-        `Current board state:\n${tasks}\n` +
+        `Current board state: ${tasks}. ` +
         `Agents available: ${agents}. ` +
         `To update the board, POST to http://localhost:${PORT}/state with the full updated state JSON.`;
+
+      // Sanitize message: newlines in args also break cmd.exe on Windows.
+      const safeMessage = message.replace(/[\r\n]+/g, " ");
 
       const args = [
         "--print",
@@ -317,15 +362,32 @@ const server = http.createServer((req, res) => {
         systemPrompt,
       ];
       if (session_id) args.push("--resume", session_id);
-      args.push(message);
+      args.push(safeMessage);
 
-      const child = spawn(CLAUDE_BIN, [...CLAUDE_ARGS_PREFIX, ...args], {
+      if (!CLAUDE_BIN) {
+        return json(res, 503, {
+          error:
+            "Claude CLI not found. Install it with: npm install -g @anthropic-ai/claude-code",
+        });
+      }
+
+      const child = spawn(CLAUDE_BIN, args, {
         stdio: ["ignore", "pipe", "pipe"],
+        shell: CLAUDE_SHELL,
       });
 
       let stdout = "";
       let stderr = "";
       let replied = false;
+
+      const CHAT_TIMEOUT_MS = 120_000;
+      const killTimer = setTimeout(() => {
+        if (replied) return;
+        replied = true;
+        child.kill();
+        json(res, 504, { error: "Claude did not respond within 2 minutes." });
+      }, CHAT_TIMEOUT_MS);
+
       child.stdout.on("data", (d) => {
         stdout += d;
       });
@@ -340,6 +402,7 @@ const server = http.createServer((req, res) => {
       });
 
       child.on("close", (code) => {
+        clearTimeout(killTimer);
         if (replied) return;
         replied = true;
         let reply = "";
@@ -372,31 +435,47 @@ const server = http.createServer((req, res) => {
 });
 
 // ─── Claude Code skill installer ─────────────────────────────────
+//
+// Skills use node -e for all HTTP calls instead of curl — curl is not
+// reliably available in the Claude Code sandbox on Windows.
+// installSkills() is called on `serve` and initial setup only — NOT on
+// `port`, which fires on every scan cycle and would otherwise overwrite
+// skill files constantly.
 
 function installSkills() {
   const commandsDir = path.join(os.homedir(), ".claude", "commands");
+  const sourceDir = __dirname.replace(/\\/g, "/");
 
-  // Skills use $PORT (shell variable) so they work for any project.
-  // Each skill resolves the port at runtime via `node Tasker/tasker.js port`.
   const portLine = `PORT=$(node Tasker/tasker.js port)`;
+
+  // node-based server health check — works on Windows and Mac without curl
+  const nodeCheck = `node -e "require('http').get('http://localhost:'+process.env.PORT+'/',r=>process.exit(0)).on('error',()=>process.exit(1))" PORT=$PORT 2>/dev/null`;
 
   const startBlock = `\`\`\`bash
 ${portLine}
-if ! curl -s http://localhost:\$PORT/ > /dev/null 2>&1; then
+${nodeCheck} || {
   nohup node Tasker/tasker.js serve > /dev/null 2>&1 &
   for i in 1 2 3 4 5 6 7 8 9 10; do
     sleep 1
-    curl -s http://localhost:\$PORT/ > /dev/null 2>&1 && break
+    ${nodeCheck} && break
   done
-fi
+}
 \`\`\``;
 
   const openBrowserCmd =
     process.platform === "win32"
-      ? `start "" "http://localhost:\$PORT"`
+      ? `start "" "http://localhost:$PORT"`
       : process.platform === "darwin"
-        ? `open "http://localhost:\$PORT"`
-        : `xdg-open "http://localhost:\$PORT"`;
+        ? `open "http://localhost:$PORT"`
+        : `xdg-open "http://localhost:$PORT"`;
+
+  const resumeBlock = `\`\`\`bash
+${portLine}
+node -e "
+const h=require('http'),r=h.request({hostname:'localhost',port:process.env.PORT,path:'/resume',method:'POST'},res=>{let d='';res.on('data',c=>d+=c);res.on('end',()=>console.log(d))});
+r.on('error',e=>console.log('err:',e.message));r.end();
+" PORT=$PORT
+\`\`\``;
 
   const queueSteps = `
 ## 2. Check the queue
@@ -407,7 +486,20 @@ If there are no ready tasks, skip to step 5.
 
 ## 3. Mark tasks in_progress
 
-For each ready task, read the current \`./Tasker/tasks.json\` immediately before each POST (never use a stale copy), set that task's \`status\` to \`"in_progress"\`, and POST the full patched state to \`http://localhost:\$PORT/state\`.
+For each ready task, read the current \`./Tasker/tasks.json\` immediately before each POST (never use a stale copy), set that task's \`status\` to \`"in_progress"\`, and POST the full patched state to \`http://localhost:$PORT/state\`.
+
+Use \`node -e\` to POST (do not use curl — it is not available in the Claude Code sandbox on Windows):
+
+\`\`\`bash
+node -e "
+const http=require('http'),fs=require('fs');
+const state=JSON.parse(fs.readFileSync('Tasker/tasks.json','utf8'));
+// ... patch state.tasks[i].status = 'in_progress' ...
+const body=JSON.stringify(state);
+const req=http.request({hostname:'localhost',port:process.env.PORT,path:'/state',method:'POST',headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(body)}},res=>{let d='';res.on('data',c=>d+=c);res.on('end',()=>console.log(d))});
+req.on('error',e=>console.log('err:',e.message));req.write(body);req.end();
+" PORT=$PORT
+\`\`\`
 
 ## 4. Spawn one Agent per task (in parallel if multiple)
 
@@ -431,17 +523,14 @@ When each agent finishes, inspect its result **before** updating state:
 
 **If the agent returned an error containing "rate limit", "usage limit", "overloaded", or "capacity":**
 - Reset the task's \`status\` back to \`"ready"\` in \`./Tasker/tasks.json\`
-- POST to \`http://localhost:\$PORT/pause-with-message\` with a JSON body like:
-  \`{"message": "Paused: Claude usage limit hit while working on \\"<task title>\\". Resume when ready."}\`
+- POST to \`http://localhost:$PORT/pause-with-message\` using \`node -e\` with body \`{"message": "Paused: Claude usage limit hit while working on \\"<task title>\\". Resume when ready."}\`
 - Stop immediately — do not update task state, do not call ScheduleWakeup.
 
 **Otherwise (normal completion):**
 - Read the current \`./Tasker/tasks.json\` again, then:
 - Set the task's \`status\` to \`"in_review"\`
 - Append to its \`activity\` array: \`{"timestamp": "<ISO timestamp>", "type": "output", "content": "<agent's summary>"}\`
-- POST the full patched state to \`http://localhost:\$PORT/state\``;
-
-  const sourceDir = __dirname.replace(/\\/g, "/");
+- POST the full patched state to \`http://localhost:$PORT/state\` using \`node -e\``;
 
   const taskerContent = `---
 description: Start the Tasker server, open the board, and start the scan loop
@@ -482,23 +571,24 @@ You are the Tasker **team lead**. Your job is to manage the queue and delegate w
 
 ${startBlock}
 
-\`\`\`bash
-${portLine}
-curl -s -X POST http://localhost:\$PORT/resume
-\`\`\`
+${resumeBlock}
 
 ${queueSteps}
 
 ## 6. Start the watch loop
 
-Call ScheduleWakeup with \`delaySeconds=30\` and \`prompt="/tasker-watch"\`. The result text looks like \`"Next wakeup scheduled for ... (in 101s)"\`. Extract the number using a pattern like \`/\\(in (\\d+)s\\)/\`, then POST it:
+Call ScheduleWakeup with \`delaySeconds=30\` and \`prompt="/tasker-watch"\`. The result text looks like \`"Next wakeup scheduled for ... (in 101s)"\`. Extract the seconds using \`/\\(in (\\d+)s\\)/\`, then POST:
 
 \`\`\`bash
-${portLine}
-curl -s -X POST http://localhost:\$PORT/next-scan -H "Content-Type: application/json" -d "{\\"seconds\\": X}"
+node -e "
+const http=require('http');
+const body=JSON.stringify({seconds: X});
+const req=http.request({hostname:'localhost',port:process.env.PORT,path:'/next-scan',method:'POST',headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(body)}},res=>{let d='';res.on('data',c=>d+=c);res.on('end',()=>console.log(d))});
+req.on('error',e=>console.log('err:',e.message));req.write(body);req.end();
+" PORT=$PORT
 \`\`\`
 
-Replace X with the actual seconds. If you cannot parse the number, use 90.
+Replace X with the actual seconds extracted above. If you cannot parse the number, use 90.
 
 ---
 
@@ -512,7 +602,10 @@ description: Check server state, then invoke /tasker-scan if server is running a
 
 \`\`\`bash
 ${portLine}
-curl -s http://localhost:\$PORT/paused
+node -e "
+const http=require('http');
+http.get('http://localhost:'+process.env.PORT+'/paused',res=>{let d='';res.on('data',c=>d+=c);res.on('end',()=>console.log(d))}).on('error',()=>{console.log('unreachable');process.exit(1)});
+" PORT=$PORT
 \`\`\`
 
 - If the command **fails** (server unreachable) — stop immediately. Do not reschedule.
@@ -530,7 +623,10 @@ description: Pause the Tasker scan loop
 
 \`\`\`bash
 ${portLine}
-curl -s -X POST http://localhost:\$PORT/pause
+node -e "
+const h=require('http'),r=h.request({hostname:'localhost',port:process.env.PORT,path:'/pause',method:'POST'},res=>{let d='';res.on('data',c=>d+=c);res.on('end',()=>console.log(d))});
+r.on('error',e=>console.log('err:',e.message));r.end();
+" PORT=$PORT
 \`\`\`
 
 Then stop — do not reschedule.
@@ -542,41 +638,24 @@ description: Stop the Tasker server
 
 \`\`\`bash
 ${portLine}
-curl -s -X POST http://localhost:\$PORT/shutdown
+node -e "
+const h=require('http'),r=h.request({hostname:'localhost',port:process.env.PORT,path:'/shutdown',method:'POST'},res=>{let d='';res.on('data',c=>d+=c);res.on('end',()=>console.log(d))});
+r.on('error',e=>console.log('err:',e.message));r.end();
+" PORT=$PORT
 \`\`\`
 `;
 
   try {
     fs.mkdirSync(commandsDir, { recursive: true });
-    fs.writeFileSync(
-      path.join(commandsDir, "tasker.md"),
-      taskerContent,
-      "utf8",
-    );
+    fs.writeFileSync(path.join(commandsDir, "tasker.md"), taskerContent, "utf8");
     console.log(`[tasker] Skill installed: /tasker`);
-    fs.writeFileSync(
-      path.join(commandsDir, "tasker-scan.md"),
-      scanContent,
-      "utf8",
-    );
+    fs.writeFileSync(path.join(commandsDir, "tasker-scan.md"), scanContent, "utf8");
     console.log(`[tasker] Skill installed: /tasker-scan`);
-    fs.writeFileSync(
-      path.join(commandsDir, "tasker-watch.md"),
-      watchContent,
-      "utf8",
-    );
+    fs.writeFileSync(path.join(commandsDir, "tasker-watch.md"), watchContent, "utf8");
     console.log(`[tasker] Skill installed: /tasker-watch`);
-    fs.writeFileSync(
-      path.join(commandsDir, "tasker-pause.md"),
-      pauseContent,
-      "utf8",
-    );
+    fs.writeFileSync(path.join(commandsDir, "tasker-pause.md"), pauseContent, "utf8");
     console.log(`[tasker] Skill installed: /tasker-pause`);
-    fs.writeFileSync(
-      path.join(commandsDir, "tasker-stop.md"),
-      stopContent,
-      "utf8",
-    );
+    fs.writeFileSync(path.join(commandsDir, "tasker-stop.md"), stopContent, "utf8");
     console.log(`[tasker] Skill installed: /tasker-stop`);
   } catch (err) {
     console.warn(`[tasker] Could not install skills: ${err.message}`);
@@ -585,12 +664,13 @@ curl -s -X POST http://localhost:\$PORT/shutdown
 
 // ─── Start ────────────────────────────────────────────────────────
 
-installSkills();
-
 if (process.argv[2] === "port") {
+  // NOTE: Do NOT call installSkills() here — `port` fires on every scan cycle
+  // (PORT=$(node Tasker/tasker.js port)) and would overwrite skill files constantly.
   console.log(PORT);
   process.exit(0);
 } else if (process.argv[2] === "serve") {
+  installSkills();
   if (!appState) {
     appState = DEFAULT_STATE;
     fs.writeFileSync(STATE_FILE, JSON.stringify(appState, null, 2), "utf8");
@@ -615,7 +695,8 @@ if (process.argv[2] === "port") {
     }
     server.close(() => process.exit(0));
   });
-} else if (!process.argv[2]) {
+} else {
+  installSkills();
   console.log(`\nNext steps:`);
   console.log(
     `  1. Reload VS Code — open the command palette and run "Reload Window"`,

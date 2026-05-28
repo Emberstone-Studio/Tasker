@@ -1687,6 +1687,10 @@
         <!-- CHAT PANEL (slide-in from right) -->
         <div id="chat-panel">
           <div id="chat-panel-inner">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);flex-shrink:0;">
+              <span style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;">Claude</span>
+              <button type="button" onclick="newChatSession()" style="background:none;border:1px solid var(--border);color:var(--text-secondary);cursor:pointer;font-size:11px;font-family:var(--font-ui);padding:3px 8px;" title="Start a new chat session">New Chat</button>
+            </div>
             <div id="chat-panel-messages"></div>
             <div id="chat-panel-input-row">
               <textarea
@@ -2255,6 +2259,7 @@
 
       function handleWatcherEvent(ev) {
         if (ev.type === "connected") {
+          _chatSessionId = null;
           if (ev.projectName) {
             document.title = `Tasker — ${ev.projectName}`;
             const center = document.getElementById("topbar-center");
@@ -2483,6 +2488,13 @@
           sendBtn.disabled = false;
           textarea.focus();
         }
+      }
+
+      function newChatSession() {
+        _chatSessionId = null;
+        const list = document.getElementById("chat-panel-messages");
+        if (list) list.innerHTML = "";
+        _initChatPanel();
       }
 
       function _initChatPanel() {
