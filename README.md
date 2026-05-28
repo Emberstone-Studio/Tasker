@@ -2,7 +2,7 @@
 
 A local-first kanban board for Claude Code agents. Create tasks on the board, run `/tasker` in Claude Code to execute them, and review the output — all without leaving your editor.
 
-![Tasker board](https://raw.githubusercontent.com/Emberstone-Studio/Tasker/main/tasker-screen.jpeg)
+![Tasker board](https://raw.githubusercontent.com/Emberstone-Studio/Tasker/main/tasker-screen1.png)
 
 ## Requirements
 
