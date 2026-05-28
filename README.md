@@ -175,3 +175,7 @@ State is persisted in `Tasker/tasks.json` and synced to the browser in real time
 | `<project>/Tasker/README.md` | Per-project readme (copied from master on first `/tasker` run) |
 | `<project>/Tasker/tasks.json` | Per-project task state (created on first server start) |
 | `<project>/.claude/settings.json` | Per-project agent permissions |
+
+---
+
+> Patent Pending — US Application 64/076,775 · © 2026 Emberstone Studio
