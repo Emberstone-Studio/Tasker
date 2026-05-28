@@ -9,9 +9,17 @@ const path = require("path");
 const os = require("os");
 const { spawn } = require("child_process");
 
-const PORT = 7842;
+// Derive a stable port from the project directory so each project gets its own server.
+function projectPort(dir) {
+  let h = 5381;
+  for (let i = 0; i < dir.length; i++) h = ((h << 5) + h) ^ dir.charCodeAt(i);
+  return 7843 + (Math.abs(h) % 2000);
+}
+
+const PORT = process.env.TASKER_PORT ? parseInt(process.env.TASKER_PORT) : projectPort(__dirname);
 const HTML_FILE = path.join(__dirname, "tasker.html");
 const STATE_FILE = path.join(__dirname, "tasks.json");
+const PROJECT_NAME = path.basename(path.dirname(__dirname));
 
 const DEFAULT_STATE = {
   tasks: [],
@@ -85,7 +93,7 @@ const server = http.createServer((req, res) => {
 
   if (req.method === "GET" && req.url === "/events") {
     res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive", ...CORS });
-    res.write(`data: ${JSON.stringify({ type: "connected", state: appState, paused, lastHeartbeat })}\n\n`);
+    res.write(`data: ${JSON.stringify({ type: "connected", state: appState, paused, lastHeartbeat, projectName: PROJECT_NAME })}\n\n`);
     clients.add(res);
     const hb = setInterval(() => {
       try { res.write(": ping\n\n"); } catch { clearInterval(hb); clients.delete(res); }
@@ -270,17 +278,40 @@ const server = http.createServer((req, res) => {
 
 // ─── Claude Code skill installer ─────────────────────────────────
 
+function installSkills() {
+  const commandsDir = path.join(os.homedir(), ".claude", "commands");
 
-const QUEUE_STEPS = `
+  // Skills use $PORT (shell variable) so they work for any project.
+  // Each skill resolves the port at runtime via `node Tasker/tasker.js port`.
+  const portLine = `PORT=$(node Tasker/tasker.js port)`;
+
+  const startBlock = `\`\`\`bash
+${portLine}
+if ! curl -s http://localhost:\$PORT/ > /dev/null 2>&1; then
+  nohup node Tasker/tasker.js serve > /dev/null 2>&1 &
+  for i in 1 2 3 4 5 6 7 8 9 10; do
+    sleep 1
+    curl -s http://localhost:\$PORT/ > /dev/null 2>&1 && break
+  done
+fi
+\`\`\``;
+
+  const openBrowserCmd = process.platform === "win32"
+    ? `start "" "http://localhost:\$PORT"`
+    : process.platform === "darwin"
+    ? `open "http://localhost:\$PORT"`
+    : `xdg-open "http://localhost:\$PORT"`;
+
+  const queueSteps = `
 ## 2. Check the queue
 
-Read \`${STATE_FILE}\`. Find all tasks with \`"status": "ready"\`.
+Read \`./Tasker/tasks.json\`. Find all tasks with \`"status": "ready"\`.
 
 If there are no ready tasks, skip to step 5.
 
 ## 3. Mark tasks in_progress
 
-For each ready task, read the current \`${STATE_FILE}\` immediately before each POST (never use a stale copy), set that task's \`status\` to \`"in_progress"\`, and POST the full patched state to \`http://localhost:7842/state\`.
+For each ready task, read the current \`./Tasker/tasks.json\` immediately before each POST (never use a stale copy), set that task's \`status\` to \`"in_progress"\`, and POST the full patched state to \`http://localhost:\$PORT/state\`.
 
 ## 4. Spawn one Agent per task (in parallel if multiple)
 
@@ -288,10 +319,10 @@ For each task, call the **Agent tool** with:
 
 - **description**: \`"[AgentName]: [task title]"\` — e.g. \`"Coder: Fix login bug"\`
 - **prompt**: A self-contained brief that includes:
-  - The agent's **role** (copy it verbatim from the \`agents\` array in ${STATE_FILE})
+  - The agent's **role** (copy it verbatim from the \`agents\` array in \`./Tasker/tasks.json\`)
   - The task **title** and **description** (the agent's actual instructions)
   - Any user comments: activity entries with \`"type": "chat_user"\` from the task's \`activity\` array — include them verbatim under a **User comments** heading so the agent can address them
-  - The working directory: \`${__dirname}\`
+  - The working directory: the current working directory
   - What to return: a concise summary of what was done, including any files changed
 
 The agent should do the real work using its tools (Read, Edit, Write, Bash, etc.).
@@ -303,41 +334,31 @@ If multiple tasks are ready, spawn all agents in a **single message** as paralle
 When each agent finishes, inspect its result **before** updating state:
 
 **If the agent returned an error containing "rate limit", "usage limit", "overloaded", or "capacity":**
-- Reset the task's \`status\` back to \`"ready"\` in ${STATE_FILE}
-- POST to \`http://localhost:7842/pause-with-message\` with a JSON body like:
+- Reset the task's \`status\` back to \`"ready"\` in \`./Tasker/tasks.json\`
+- POST to \`http://localhost:\$PORT/pause-with-message\` with a JSON body like:
   \`{"message": "Paused: Claude usage limit hit while working on \\"<task title>\\". Resume when ready."}\`
 - Stop immediately — do not update task state, do not call ScheduleWakeup.
 
 **Otherwise (normal completion):**
-- Read the current \`${STATE_FILE}\` again, then:
+- Read the current \`./Tasker/tasks.json\` again, then:
 - Set the task's \`status\` to \`"in_review"\`
 - Append to its \`activity\` array: \`{"timestamp": "<ISO timestamp>", "type": "output", "content": "<agent's summary>"}\`
-- POST the full patched state to \`http://localhost:7842/state\``;
+- POST the full patched state to \`http://localhost:\$PORT/state\``;
 
-function installSkills() {
-  const commandsDir = path.join(os.homedir(), ".claude", "commands");
-
-  const startBlock = `\`\`\`bash
-if ! curl -s http://localhost:7842/ > /dev/null 2>&1; then
-  nohup node "${__dirname.replace(/\\/g, "/")}/tasker.js" serve > /dev/null 2>&1 &
-  for i in 1 2 3 4 5 6 7 8 9 10; do
-    sleep 1
-    curl -s http://localhost:7842/ > /dev/null 2>&1 && break
-  done
-fi
-\`\`\``;
-
-  const openBrowserCmd = process.platform === "win32"
-    ? `start "" "http://localhost:${PORT}"`
-    : process.platform === "darwin"
-    ? `open "http://localhost:${PORT}"`
-    : `xdg-open "http://localhost:${PORT}"`;
+  const sourceDir = __dirname.replace(/\\/g, "/");
 
   const taskerContent = `---
 description: Start the Tasker server, open the board, and start the scan loop
 ---
 
-The Tasker installation is at: ${__dirname}
+## 0. Bootstrap Tasker files if missing
+
+\`\`\`bash
+mkdir -p Tasker
+cp "${sourceDir}/tasker.js" ./Tasker/tasker.js
+cp "${sourceDir}/tasker.html" ./Tasker/tasker.html
+cp "${sourceDir}/README.md" ./Tasker/README.md
+\`\`\`
 
 ## 1. Start the server if needed
 
@@ -346,6 +367,7 @@ ${startBlock}
 ## 2. Open the browser
 
 \`\`\`bash
+${portLine}
 ${openBrowserCmd}
 \`\`\`
 
@@ -360,24 +382,24 @@ description: Start the Tasker server if needed, then check the queue and execute
 
 You are the Tasker **team lead**. Your job is to manage the queue and delegate work to specialized sub-agents — not to do the work yourself.
 
-The Tasker installation is at: ${__dirname}
-
 ## 1. Start the server if needed
 
 ${startBlock}
 
 \`\`\`bash
-curl -s -X POST http://localhost:7842/resume
+${portLine}
+curl -s -X POST http://localhost:\$PORT/resume
 \`\`\`
 
-${QUEUE_STEPS}
+${queueSteps}
 
 ## 6. Start the watch loop
 
 Call ScheduleWakeup with \`delaySeconds=30\` and \`prompt="/tasker-watch"\`. The result text looks like \`"Next wakeup scheduled for ... (in 101s)"\`. Extract the number using a pattern like \`/\\(in (\\d+)s\\)/\`, then POST it:
 
 \`\`\`bash
-curl -s -X POST http://localhost:7842/next-scan -H "Content-Type: application/json" -d "{\\"seconds\\": X}"
+${portLine}
+curl -s -X POST http://localhost:\$PORT/next-scan -H "Content-Type: application/json" -d "{\\"seconds\\": X}"
 \`\`\`
 
 Replace X with the actual seconds. If you cannot parse the number, use 90.
@@ -392,7 +414,10 @@ description: Check server state, then invoke /tasker-scan if server is running a
 
 ## 1. Check pause state
 
-Run \`curl -s http://localhost:7842/paused\`.
+\`\`\`bash
+${portLine}
+curl -s http://localhost:\$PORT/paused
+\`\`\`
 
 - If the command **fails** (server unreachable) — stop immediately. Do not reschedule.
 - If the response is \`{"paused":true}\` — stop immediately. Do not reschedule.
@@ -408,7 +433,8 @@ description: Pause the Tasker scan loop
 ---
 
 \`\`\`bash
-curl -s -X POST http://localhost:7842/pause
+${portLine}
+curl -s -X POST http://localhost:\$PORT/pause
 \`\`\`
 
 Then stop — do not reschedule.
@@ -419,7 +445,8 @@ description: Stop the Tasker server
 ---
 
 \`\`\`bash
-curl -s -X POST http://localhost:7842/shutdown
+${portLine}
+curl -s -X POST http://localhost:\$PORT/shutdown
 \`\`\`
 `;
 
@@ -444,7 +471,10 @@ curl -s -X POST http://localhost:7842/shutdown
 
 installSkills();
 
-if (process.argv[2] === "serve") {
+if (process.argv[2] === "port") {
+  console.log(PORT);
+  process.exit(0);
+} else if (process.argv[2] === "serve") {
   if (!appState) {
     appState = DEFAULT_STATE;
     fs.writeFileSync(STATE_FILE, JSON.stringify(appState, null, 2), "utf8");
@@ -455,7 +485,7 @@ if (process.argv[2] === "serve") {
   });
   process.on("SIGINT", () => { for (const res of clients) { try { res.end(); } catch {} } server.close(() => process.exit(0)); });
   process.on("SIGTERM", () => { for (const res of clients) { try { res.end(); } catch {} } server.close(() => process.exit(0)); });
-} else {
+} else if (!process.argv[2]) {
   console.log(`\nNext steps:`);
   console.log(`  1. Reload VS Code — open the command palette and run "Reload Window"`);
   console.log(`  2. Run /tasker in Claude Code\n`);

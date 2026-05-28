@@ -12,19 +12,24 @@ A local-first kanban board for Claude Code agents. Create tasks on the board, ru
 
 ## Getting Started
 
-1. Download the [latest release](https://github.com/Emberstone-Studio/Tasker/releases) (Tasker.zip).
-2. Unzip and drop the `Tasker/` folder anywhere in your VS Code project.
-3. Run the installer from that directory:
-   ```
-   node tasker.js
-   ```
-   This installs five Claude Code skills into `~/.claude/commands/` and prints the next steps. It does **not** start a server.
-4. Reload your VS Code window so the new skills are available:
-   - Open the command palette (`Ctrl+Shift+P` on Windows/Linux, `Cmd+Shift+P` on macOS)
-   - Run **Reload Window**
-   OR
-   - Exit and restart VS Code.
-5. Run `/tasker` in Claude Code. This starts the server, opens the board in your browser, and begins the scan loop.
+### 1. Install globally (once)
+
+Download the [latest release](https://github.com/Emberstone-Studio/Tasker/releases) (Tasker.zip) and extract it anywhere (e.g. your Downloads folder). Then:
+
+- **macOS** — double-click `Install-Mac.command`
+- **Windows** — double-click `Install-Windows.bat`
+
+This copies the `Tasker/` folder to `~/.claude/tasker/`, installs five Claude Code skills into `~/.claude/commands/`, and prints the next steps.
+
+### 2. Reload VS Code
+
+Open the command palette (`Cmd+Shift+P` on macOS, `Ctrl+Shift+P` on Windows/Linux) and run **Reload Window** so the new skills are available.
+
+### 3. Use in any project
+
+Open a project in VS Code and run `/tasker` in Claude Code. On the first run in a new project it creates a `Tasker/` directory and copies `tasker.js`, `tasker.html`, and `README.md` into it, then starts the server, opens the board, and begins the scan loop. Nothing to copy or unzip per project.
+
+---
 
 ## Board
 
@@ -84,7 +89,7 @@ Running `node tasker.js` installs five skills into `~/.claude/commands/`:
 
 | Skill | Purpose |
 |---|---|
-| `/tasker` | Starts the server (if not running), opens the board, and starts the scan loop |
+| `/tasker` | Bootstraps project files if missing, starts the server, opens the board, and starts the scan loop |
 | `/tasker-scan` | Starts the server if needed, resumes the loop, scans the queue, executes ready tasks, then schedules `/tasker-watch` |
 | `/tasker-watch` | Checks pause state, then calls `/tasker-scan` if not paused |
 | `/tasker-pause` | Pauses the scan loop (server keeps running) |
@@ -92,12 +97,16 @@ Running `node tasker.js` installs five skills into `~/.claude/commands/`:
 
 Tasker itself has no built-in model calls. All task execution happens inside Claude Code.
 
+### Ports
+
+Each project gets a stable port derived from its directory path (range 7843–9842), so multiple projects can run simultaneously without conflict. The port is resolved at runtime — the skills always run `node Tasker/tasker.js port` to discover it rather than using a hardcoded value.
+
 ### How the loop works
 
 `/tasker-scan` and `/tasker-watch` alternate to keep the queue running:
 
 1. `/tasker-scan` starts the server (if not running), resumes the loop, then scans the queue
-2. It reads `tasks.json`, finds all tasks with `"status": "ready"`, marks them **In Progress**, and spawns a dedicated sub-agent per task via the Agent tool
+2. It reads `Tasker/tasks.json`, finds all tasks with `"status": "ready"`, marks them **In Progress**, and spawns a dedicated sub-agent per task via the Agent tool
 3. When agents finish, tasks move to **In Review** with output posted to the activity log
 4. `/tasker-scan` schedules `/tasker-watch` by calling `ScheduleWakeup` with `delaySeconds=30`. The runtime clamps this to a minimum of ~60 seconds. The actual delay is extracted from the wakeup confirmation text and posted to `POST /next-scan` so the countdown on the board reflects reality rather than the requested delay
 5. `/tasker-watch` wakes up, checks the pause state via `GET /paused`, and calls `/tasker-scan` again if not paused
@@ -138,7 +147,7 @@ Conversations persist within the session. Each message is sent with a session ID
 Open the **Settings** panel (⚙) to:
 
 - **Toggle dark/light mode** — switches between the dark (default) and light themes; preference is saved in `localStorage`
-- **Permissions** — toggle which tool categories sub-agents are allowed to use without a permission prompt. Changes are written to `.claude/settings.json` in the Tasker directory
+- **Permissions** — toggle which tool categories sub-agents are allowed to use without a permission prompt. Changes are written to `.claude/settings.json` in the project directory
 
 | Permission | Tools |
 |---|---|
@@ -147,22 +156,22 @@ Open the **Settings** panel (⚙) to:
 | Bash commands | `Bash(*)` |
 | Web access | `WebFetch(*)`, `WebSearch(*)` |
 
-Note: the Settings modal no longer includes an Export State JSON button. To export state, copy `tasks.json` directly.
+Note: to export state, copy `Tasker/tasks.json` directly.
 
 ## Data
 
-State is persisted in `tasks.json` and synced to the browser in real time over SSE. The file is written on every state change.
+State is persisted in `Tasker/tasks.json` and synced to the browser in real time over SSE. The file is written on every state change.
 
 ## Files
 
-| File | Purpose |
+| Location | Purpose |
 |---|---|
-| `tasker.js` | Skill installer (default) and HTTP server (`node tasker.js serve`) |
-| `tasker.html` | The board UI, served at `http://localhost:7842` |
-| `tasks.json` | Persistent task state (created automatically on first server start) |
-| `.claude/settings.json` | Agent permissions (created by the Settings panel) |
-| `~/.claude/commands/tasker.md` | `/tasker` skill — starts server, opens board, begins scan loop |
-| `~/.claude/commands/tasker-scan.md` | `/tasker-scan` skill — team lead that delegates tasks to sub-agents |
-| `~/.claude/commands/tasker-watch.md` | `/tasker-watch` skill — checks pause state and re-triggers scan |
-| `~/.claude/commands/tasker-pause.md` | `/tasker-pause` skill — pauses the loop |
-| `~/.claude/commands/tasker-stop.md` | `/tasker-stop` skill — shuts down the server |
+| `Install-Mac.command` | macOS installer — double-click to run |
+| `Install-Windows.bat` | Windows installer — double-click to run |
+| `~/.claude/tasker/` | Master copy installed globally |
+| `~/.claude/commands/tasker*.md` | Global skills, installed once, shared by all projects |
+| `<project>/Tasker/tasker.js` | Per-project server (copied from master on first `/tasker` run) |
+| `<project>/Tasker/tasker.html` | Per-project UI (copied from master on first `/tasker` run) |
+| `<project>/Tasker/README.md` | Per-project readme (copied from master on first `/tasker` run) |
+| `<project>/Tasker/tasks.json` | Per-project task state (created on first server start) |
+| `<project>/.claude/settings.json` | Per-project agent permissions |
