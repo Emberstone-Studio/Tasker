@@ -245,7 +245,9 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: color 0.15s, background 0.15s;
+        transition:
+          color 0.15s,
+          background 0.15s;
         line-height: 1;
       }
 
@@ -254,8 +256,12 @@
         background: var(--bg-subtle);
       }
 
-      #btn-pause:hover { color: var(--warning); }
-      #btn-stop:hover { color: var(--danger); }
+      #btn-pause:hover {
+        color: var(--warning);
+      }
+      #btn-stop:hover {
+        color: var(--danger);
+      }
 
       /* ─── MAIN LAYOUT ───────────────────────────────────── */
       #app {
@@ -906,7 +912,6 @@
         flex-shrink: 0;
       }
 
-
       /* ─── MOVE TO DONE BUTTON ───────────────────────────── */
       .btn-move-done {
         background: var(--success);
@@ -944,8 +949,12 @@
       }
 
       @keyframes card-indeterminate {
-        0%   { transform: translateX(-200%); }
-        100% { transform: translateX(400%); }
+        0% {
+          transform: translateX(-200%);
+        }
+        100% {
+          transform: translateX(400%);
+        }
       }
 
       .card-progress-bar.indeterminate {
@@ -964,10 +973,27 @@
         padding-right: 4px;
       }
 
-      .chat-msg { display: flex; flex-direction: column; gap: 3px; max-width: 85%; }
-      .chat-msg.user  { align-self: flex-end;   align-items: flex-end; }
-      .chat-msg.agent { align-self: flex-start; align-items: flex-start; max-width: 100%; }
-      .chat-msg.system { align-self: center; align-items: center; max-width: 100%; width: 100%; }
+      .chat-msg {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        max-width: 85%;
+      }
+      .chat-msg.user {
+        align-self: flex-end;
+        align-items: flex-end;
+      }
+      .chat-msg.agent {
+        align-self: flex-start;
+        align-items: flex-start;
+        max-width: 100%;
+      }
+      .chat-msg.system {
+        align-self: center;
+        align-items: center;
+        max-width: 100%;
+        width: 100%;
+      }
 
       .chat-bubble {
         padding: 8px 12px;
@@ -1028,7 +1054,9 @@
         transition: border-color 0.15s;
       }
 
-      .chat-input:focus { border-color: var(--accent); }
+      .chat-input:focus {
+        border-color: var(--accent);
+      }
 
       .btn-send {
         background: var(--accent);
@@ -1044,8 +1072,13 @@
         height: 36px;
       }
 
-      .btn-send:hover { background: var(--accent-hover); }
-      .btn-send:disabled { opacity: 0.4; cursor: not-allowed; }
+      .btn-send:hover {
+        background: var(--accent-hover);
+      }
+      .btn-send:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
 
       /* ─── SETTINGS MODAL ────────────────────────────────── */
       .settings-section {
@@ -1285,7 +1318,9 @@
         border: 1px solid var(--toggle-border);
         position: relative;
         cursor: pointer;
-        transition: background 0.2s, border-color 0.2s;
+        transition:
+          background 0.2s,
+          border-color 0.2s;
       }
 
       .perm-toggle.on {
@@ -1301,7 +1336,9 @@
         height: 12px;
         border-radius: 50%;
         background: var(--text-secondary);
-        transition: transform 0.2s, background 0.2s;
+        transition:
+          transform 0.2s,
+          background 0.2s;
       }
 
       .perm-toggle.on .perm-toggle-knob {
@@ -1318,7 +1355,9 @@
         flex-direction: column;
         background: var(--bg-subtle);
         border-left: 1px solid transparent;
-        transition: width 0.22s ease, border-color 0.22s ease;
+        transition:
+          width 0.22s ease,
+          border-color 0.22s ease;
       }
 
       #chat-panel.open {
@@ -1443,23 +1482,66 @@
     <div id="app">
       <!-- Usage Cap Banner -->
       <div id="usage-cap-banner" class="hidden">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path
+            d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+          />
+          <line x1="12" y1="9" x2="12" y2="13" />
+          <line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
         <span id="usage-cap-message"></span>
-        <button type="button" id="btn-usage-cap-resume" onclick="resumeFromUsageCap()">Resume</button>
-        <button type="button" id="btn-usage-cap-dismiss" onclick="dismissUsageCapBanner()" title="Dismiss">&times;</button>
+        <button
+          type="button"
+          id="btn-usage-cap-resume"
+          onclick="resumeFromUsageCap()"
+        >
+          Resume
+        </button>
+        <button
+          type="button"
+          id="btn-usage-cap-dismiss"
+          onclick="dismissUsageCapBanner()"
+          title="Dismiss"
+        >
+          &times;
+        </button>
       </div>
 
       <!-- Top Bar -->
       <div id="topbar">
         <div id="topbar-left">
-          <svg id="logo-icon" viewBox="0 0 100 100" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-            <path d="M22.74,68.64l-2.65-1.18.02,12.45c1.91,1.06,3.11,3.03,2.63,5.17s-2.25,3.57-4.39,3.6-3.97-1.37-4.51-3.45.58-4.23,2.56-5.31v-19.19c.02-3.91,2.58-7.12,6.33-8.07,0,0,.08,18.28,0,15.98Z"/>
-            <path d="M77.26,52.65c3.75.95,6.31,4.17,6.32,8.07v19.19c1.99,1.08,3.13,3.14,2.57,5.31s-2.36,3.48-4.51,3.45-3.92-1.54-4.39-3.6.71-4.1,2.63-5.17l.02-12.45-2.65,1.18c-.08,2.3,0-15.98,0-15.98Z"/>
-            <path d="M65.29,91.07c-7.91,6-18.24,6.87-26.92,2.29-8.69-4.61-14.45-13.47-14.48-23.42l-.05-17.29h52.32s-.02,16.96-.02,16.96c0,8.42-4.15,16.38-10.85,21.46ZM58.04,60.94c0-1.07-.87-1.94-1.94-1.94s-1.94.87-1.94,1.94.87,1.94,1.94,1.94,1.94-.87,1.94-1.94ZM64.02,60.94c0-1.07-.87-1.94-1.94-1.94s-1.94.87-1.94,1.94.87,1.94,1.94,1.94,1.94-.87,1.94-1.94ZM69.98,60.93c0-1.07-.87-1.94-1.94-1.94s-1.94.87-1.94,1.94.87,1.94,1.94,1.94,1.94-.87,1.94-1.94Z"/>
-            <path d="M76.16,50.48H23.85s.01-8.42.01-8.42c.02-11.21,7.75-20.76,18.5-23.74,5.69-1.41,9.68-1.6,15.21-.06,10.81,3.01,18.54,12.68,18.56,23.97l.02,8.25ZM68.64,36.05c-.11-4.21-3.53-8.19-7.79-8.19l-21.82.02c-4.26,0-7.55,4.1-7.67,8.17-.13,4.78,3.67,8.68,8.39,8.66l20.91-.05c4.5-.01,8.08-4.08,7.97-8.61Z"/>
-            <path d="M51.78,16.4h-3.6s-.03-3.96-.03-3.96c-2.05-.91-3.05-3.03-2.57-5.22.43-1.97,2.31-3.5,4.41-3.49s3.98,1.49,4.43,3.52c.48,2.19-.56,4.36-2.64,5.24v3.92Z"/>
-            <circle cx="41.23" cy="36.23" r="3.55"/>
-            <circle cx="58.75" cy="36.23" r="3.54"/>
+          <svg
+            id="logo-icon"
+            viewBox="0 0 100 100"
+            fill="currentColor"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M22.74,68.64l-2.65-1.18.02,12.45c1.91,1.06,3.11,3.03,2.63,5.17s-2.25,3.57-4.39,3.6-3.97-1.37-4.51-3.45.58-4.23,2.56-5.31v-19.19c.02-3.91,2.58-7.12,6.33-8.07,0,0,.08,18.28,0,15.98Z"
+            />
+            <path
+              d="M77.26,52.65c3.75.95,6.31,4.17,6.32,8.07v19.19c1.99,1.08,3.13,3.14,2.57,5.31s-2.36,3.48-4.51,3.45-3.92-1.54-4.39-3.6.71-4.1,2.63-5.17l.02-12.45-2.65,1.18c-.08,2.3,0-15.98,0-15.98Z"
+            />
+            <path
+              d="M65.29,91.07c-7.91,6-18.24,6.87-26.92,2.29-8.69-4.61-14.45-13.47-14.48-23.42l-.05-17.29h52.32s-.02,16.96-.02,16.96c0,8.42-4.15,16.38-10.85,21.46ZM58.04,60.94c0-1.07-.87-1.94-1.94-1.94s-1.94.87-1.94,1.94.87,1.94,1.94,1.94,1.94-.87,1.94-1.94ZM64.02,60.94c0-1.07-.87-1.94-1.94-1.94s-1.94.87-1.94,1.94.87,1.94,1.94,1.94,1.94-.87,1.94-1.94ZM69.98,60.93c0-1.07-.87-1.94-1.94-1.94s-1.94.87-1.94,1.94.87,1.94,1.94,1.94,1.94-.87,1.94-1.94Z"
+            />
+            <path
+              d="M76.16,50.48H23.85s.01-8.42.01-8.42c.02-11.21,7.75-20.76,18.5-23.74,5.69-1.41,9.68-1.6,15.21-.06,10.81,3.01,18.54,12.68,18.56,23.97l.02,8.25ZM68.64,36.05c-.11-4.21-3.53-8.19-7.79-8.19l-21.82.02c-4.26,0-7.55,4.1-7.67,8.17-.13,4.78,3.67,8.68,8.39,8.66l20.91-.05c4.5-.01,8.08-4.08,7.97-8.61Z"
+            />
+            <path
+              d="M51.78,16.4h-3.6s-.03-3.96-.03-3.96c-2.05-.91-3.05-3.03-2.57-5.22.43-1.97,2.31-3.5,4.41-3.49s3.98,1.49,4.43,3.52c.48,2.19-.56,4.36-2.64,5.24v3.92Z"
+            />
+            <circle cx="41.23" cy="36.23" r="3.55" />
+            <circle cx="58.75" cy="36.23" r="3.54" />
           </svg>
           <span id="logo">Tasker</span>
           <button
@@ -1481,69 +1563,151 @@
           <div id="watcher-status" class="disconnected">
             <span id="watcher-label">Offline — run: /tasker</span>
           </div>
-          <button id="btn-pause" class="topbar-btn" type="button" onclick="pauseTasker()" title="Pause scan loop" style="display:none;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="4" x2="7" y2="21"/><line x1="17" y1="4" x2="17" y2="21"/></svg></button>
-          <button id="btn-stop" class="topbar-btn" type="button" onclick="stopTasker()" title="Stop Tasker" style="display:none;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg></button>
-          <button id="btn-chat-toggle" class="topbar-btn" type="button" onclick="toggleChatPanel()" title="Toggle chat">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <button
+            id="btn-pause"
+            class="topbar-btn"
+            type="button"
+            onclick="pauseTasker()"
+            title="Pause scan loop"
+            style="display: none"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="7" y1="4" x2="7" y2="21" />
+              <line x1="17" y1="4" x2="17" y2="21" />
+            </svg>
           </button>
-          <button id="btn-settings" class="topbar-btn" type="button" onclick="openSettings()" title="Settings">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <button
+            id="btn-stop"
+            class="topbar-btn"
+            type="button"
+            onclick="stopTasker()"
+            title="Stop Tasker"
+            style="display: none"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+              <line x1="12" y1="2" x2="12" y2="12" />
+            </svg>
+          </button>
+          <button
+            id="btn-chat-toggle"
+            class="topbar-btn"
+            type="button"
+            onclick="toggleChatPanel()"
+            title="Toggle chat"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+              />
+            </svg>
+          </button>
+          <button
+            id="btn-settings"
+            class="topbar-btn"
+            type="button"
+            onclick="openSettings()"
+            title="Settings"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="12" cy="12" r="3" />
+              <path
+                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
+              />
+            </svg>
           </button>
         </div>
       </div>
 
       <!-- Main Content -->
       <div id="content-wrapper">
-      <div id="main">
-        <!-- BOARD -->
-        <div id="tasks-panel" class="tab-panel active">
-          <div id="tasks-columns">
-            <!-- columns injected by JS -->
+        <div id="main">
+          <!-- BOARD -->
+          <div id="tasks-panel" class="tab-panel active">
+            <div id="tasks-columns">
+              <!-- columns injected by JS -->
+            </div>
+          </div>
+
+          <!-- AGENTS -->
+          <div id="agents-panel" class="tab-panel">
+            <div id="agents-panel-inner">
+              <div class="panel-header">
+                <div class="panel-title">Agents</div>
+                <button class="btn-primary" onclick="openAgentModal(null)">
+                  + Add Agent
+                </button>
+              </div>
+              <div id="agents-grid"></div>
+            </div>
+          </div>
+
+          <!-- LOG -->
+          <div id="log-panel" class="tab-panel">
+            <div id="log-empty" class="hidden">No log entries yet.</div>
           </div>
         </div>
 
-        <!-- AGENTS -->
-        <div id="agents-panel" class="tab-panel">
-          <div id="agents-panel-inner">
-            <div class="panel-header">
-              <div class="panel-title">Agents</div>
-              <button class="btn-primary" onclick="openAgentModal(null)">
-                + Add Agent
+        <!-- CHAT PANEL (slide-in from right) -->
+        <div id="chat-panel">
+          <div id="chat-panel-inner">
+            <div id="chat-panel-messages"></div>
+            <div id="chat-panel-input-row">
+              <textarea
+                id="chat-panel-textarea"
+                class="chat-input"
+                placeholder="Ask Claude about your board…"
+                rows="1"
+              ></textarea>
+              <button
+                type="button"
+                id="chat-panel-send"
+                class="btn-send"
+                onclick="sendChatMessage()"
+              >
+                Send
               </button>
             </div>
-            <div id="agents-grid"></div>
-          </div>
-        </div>
-
-        <!-- LOG -->
-        <div id="log-panel" class="tab-panel">
-          <div id="log-empty" class="hidden">No log entries yet.</div>
-        </div>
-
-      </div>
-
-      <!-- CHAT PANEL (slide-in from right) -->
-      <div id="chat-panel">
-        <div id="chat-panel-inner">
-          <div id="chat-panel-messages"></div>
-          <div id="chat-panel-input-row">
-            <textarea
-              id="chat-panel-textarea"
-              class="chat-input"
-              placeholder="Ask Claude about your board…"
-              rows="1"
-            ></textarea>
-            <button
-              type="button"
-              id="chat-panel-send"
-              class="btn-send"
-              onclick="sendChatMessage()"
-            >Send</button>
           </div>
         </div>
       </div>
-
-      </div><!-- /content-wrapper -->
+      <!-- /content-wrapper -->
     </div>
 
     <!-- ─── TASK DETAIL MODAL ────────────────────────────────── -->
@@ -1681,15 +1845,80 @@
         <div class="modal-body">
           <div class="settings-section">
             <div class="settings-section-title">Appearance</div>
-            <div onclick="toggleTheme()" title="Toggle theme" style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;color:var(--text-secondary);">
+            <div
+              onclick="toggleTheme()"
+              title="Toggle theme"
+              style="
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                cursor: pointer;
+                color: var(--text-secondary);
+              "
+            >
               <!-- moon -->
-              <svg id="icon-moon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+              <svg
+                id="icon-moon"
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+              </svg>
               <!-- pill switch -->
-              <div id="theme-switch-track" style="width:36px;height:20px;border-radius:10px;background:var(--toggle-bg);border:1px solid var(--toggle-border);position:relative;transition:background 0.2s,border-color 0.2s;flex-shrink:0;">
-                <div id="theme-switch-knob" style="position:absolute;top:3px;left:3px;width:12px;height:12px;border-radius:50%;background:var(--text-secondary);transition:transform 0.2s,background 0.2s;"></div>
+              <div
+                id="theme-switch-track"
+                style="
+                  width: 36px;
+                  height: 20px;
+                  border-radius: 10px;
+                  background: var(--toggle-bg);
+                  border: 1px solid var(--toggle-border);
+                  position: relative;
+                  transition:
+                    background 0.2s,
+                    border-color 0.2s;
+                  flex-shrink: 0;
+                "
+              >
+                <div
+                  id="theme-switch-knob"
+                  style="
+                    position: absolute;
+                    top: 3px;
+                    left: 3px;
+                    width: 12px;
+                    height: 12px;
+                    border-radius: 50%;
+                    background: var(--text-secondary);
+                    transition:
+                      transform 0.2s,
+                      background 0.2s;
+                  "
+                ></div>
               </div>
               <!-- sun -->
-              <svg id="icon-sun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+              <svg
+                id="icon-sun"
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="12" cy="12" r="4" />
+                <path
+                  d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
+                />
+              </svg>
             </div>
           </div>
           <div class="settings-section mb-0">
@@ -1700,7 +1929,11 @@
                   <div class="perm-label">Read files</div>
                   <div class="perm-hint">Read</div>
                 </div>
-                <div class="perm-toggle" id="perm-toggle-read" onclick="togglePerm('read')">
+                <div
+                  class="perm-toggle"
+                  id="perm-toggle-read"
+                  onclick="togglePerm('read')"
+                >
                   <div class="perm-toggle-knob"></div>
                 </div>
               </div>
@@ -1709,7 +1942,11 @@
                   <div class="perm-label">Edit / Write files</div>
                   <div class="perm-hint">Edit, Write</div>
                 </div>
-                <div class="perm-toggle" id="perm-toggle-edit" onclick="togglePerm('edit')">
+                <div
+                  class="perm-toggle"
+                  id="perm-toggle-edit"
+                  onclick="togglePerm('edit')"
+                >
                   <div class="perm-toggle-knob"></div>
                 </div>
               </div>
@@ -1718,7 +1955,11 @@
                   <div class="perm-label">Bash commands</div>
                   <div class="perm-hint">Bash(*)</div>
                 </div>
-                <div class="perm-toggle" id="perm-toggle-bash" onclick="togglePerm('bash')">
+                <div
+                  class="perm-toggle"
+                  id="perm-toggle-bash"
+                  onclick="togglePerm('bash')"
+                >
                   <div class="perm-toggle-knob"></div>
                 </div>
               </div>
@@ -1727,19 +1968,44 @@
                   <div class="perm-label">Web access</div>
                   <div class="perm-hint">WebFetch(*), WebSearch(*)</div>
                 </div>
-                <div class="perm-toggle" id="perm-toggle-web" onclick="togglePerm('web')">
+                <div
+                  class="perm-toggle"
+                  id="perm-toggle-web"
+                  onclick="togglePerm('web')"
+                >
                   <div class="perm-toggle-knob"></div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-        <div class="modal-footer" style="justify-content: space-between;">
-          <a href="https://ko-fi.com/emberstonestudio" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#cd5d5d;text-decoration:none;transition:color 0.15s;" onmouseover="this.style.color='#e07070'" onmouseout="this.style.color='#cd5d5d'">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+        <div class="modal-footer" style="justify-content: space-between">
+          <a
+            href="https://ko-fi.com/emberstonestudio"
+            target="_blank"
+            rel="noopener"
+            style="
+              display: inline-flex;
+              align-items: center;
+              gap: 6px;
+              font-size: 12px;
+              color: #cd5d5d;
+              text-decoration: none;
+              transition: color 0.15s;
+            "
+            onmouseover="this.style.color = '#e07070'"
+            onmouseout="this.style.color = '#cd5d5d'"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+              />
+            </svg>
             Support Tasker
           </a>
-          <button class="btn-primary" onclick="savePermissions()">Save Permissions</button>
+          <button class="btn-primary" onclick="savePermissions()">
+            Save Permissions
+          </button>
         </div>
       </div>
     </div>
@@ -1778,17 +2044,22 @@
           </div>
           <div class="form-group">
             <label class="form-label">Agent</label>
-            <select
-              class="form-select"
-              id="at-agent"
-              title="Agent"
-            ></select>
+            <select class="form-select" id="at-agent" title="Agent"></select>
           </div>
           <div class="form-group">
             <label class="form-label">Pipeline steps (optional)</label>
-            <div class="form-hint pipeline-hint">Chain agents in sequence. Each agent's output is passed to the next.</div>
+            <div class="form-hint pipeline-hint">
+              Chain agents in sequence. Each agent's output is passed to the
+              next.
+            </div>
             <div class="pipeline-steps" id="at-pipeline-steps"></div>
-            <button type="button" class="btn-add-step" onclick="addPipelineStep('at-pipeline-steps')">+ Add step</button>
+            <button
+              type="button"
+              class="btn-add-step"
+              onclick="addPipelineStep('at-pipeline-steps')"
+            >
+              + Add step
+            </button>
           </div>
           <div class="form-group">
             <label class="form-label">Priority</label>
@@ -1845,7 +2116,7 @@
         state = incoming;
         renderBoard();
         if (editingTaskId) {
-          const t = state.tasks.find(t => t.id === editingTaskId);
+          const t = state.tasks.find((t) => t.id === editingTaskId);
           if (t) renderTaskModalBody(t);
         }
       }
@@ -1939,7 +2210,10 @@
       }
 
       function stopCountdown() {
-        if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+        if (countdownTimer) {
+          clearInterval(countdownTimer);
+          countdownTimer = null;
+        }
         const status = document.getElementById("watcher-status");
         const lbl = document.getElementById("watcher-label");
         if (lbl && status && status.classList.contains("connected")) {
@@ -1962,15 +2236,20 @@
         const pause = document.getElementById("btn-pause");
         if (el) el.className = cls;
         if (lbl) lbl.textContent = label;
-        if (stop) stop.style.display = cls === "disconnected" ? "none" : "inline-flex";
-        if (pause) pause.style.display = cls === "connected" ? "inline-flex" : "none";
+        if (stop)
+          stop.style.display = cls === "disconnected" ? "none" : "inline-flex";
+        if (pause)
+          pause.style.display = cls === "connected" ? "inline-flex" : "none";
         if (cls !== "connected") stopCountdown();
       }
 
       function stopTasker() {
         if (!confirm("Stop the Tasker server?")) return;
         setWatcherStatus("disconnected", "Offline — run: /tasker");
-        if (eventSource) { eventSource.close(); eventSource = null; }
+        if (eventSource) {
+          eventSource.close();
+          eventSource = null;
+        }
         fetch(`${WATCHER_URL}/shutdown`, { method: "POST" }).catch(() => {});
       }
 
@@ -1990,7 +2269,9 @@
             setWatcherStatus("paused", "Paused — run: /tasker-scan");
           } else {
             setWatcherStatus("connected", "Running");
-            const elapsed = ev.lastHeartbeat ? Math.floor((Date.now() - ev.lastHeartbeat) / 1000) : 0;
+            const elapsed = ev.lastHeartbeat
+              ? Math.floor((Date.now() - ev.lastHeartbeat) / 1000)
+              : 0;
             startCountdown(Math.max(1, 60 - elapsed));
           }
           return;
@@ -2013,7 +2294,8 @@
           return;
         }
         if (ev.type === "next_scan") {
-          if (typeof ev.seconds === "number" && ev.seconds > 0) startCountdown(ev.seconds);
+          if (typeof ev.seconds === "number" && ev.seconds > 0)
+            startCountdown(ev.seconds);
           return;
         }
         if (ev.type === "shutdown") {
@@ -2050,16 +2332,29 @@
           if (task) {
             task.progress = ev.progress;
             persistState();
-            const bar = document.querySelector(`#card-${task.id} .card-progress-bar`);
+            const bar = document.querySelector(
+              `#card-${task.id} .card-progress-bar`,
+            );
             if (bar) {
               const activity = task.activity || [];
-              const lastInProgressIdx = activity.reduce((last, a, i) =>
-                (a.type === "moved" && /^in progress/i.test(a.content)) ? i : last, -1);
-              const outputCount = activity.slice(lastInProgressIdx + 1).filter(a => a.type === "output").length;
-              const expectedSteps = (task.pipeline && task.pipeline.length > 0) ? task.pipeline.length + 1 : 1;
-              const pct = outputCount > 0
-                ? Math.round(Math.min(outputCount / expectedSteps, 1) * 100)
-                : ev.progress;
+              const lastInProgressIdx = activity.reduce(
+                (last, a, i) =>
+                  a.type === "moved" && /^in progress/i.test(a.content)
+                    ? i
+                    : last,
+                -1,
+              );
+              const outputCount = activity
+                .slice(lastInProgressIdx + 1)
+                .filter((a) => a.type === "output").length;
+              const expectedSteps =
+                task.pipeline && task.pipeline.length > 0
+                  ? task.pipeline.length + 1
+                  : 1;
+              const pct =
+                outputCount > 0
+                  ? Math.round(Math.min(outputCount / expectedSteps, 1) * 100)
+                  : ev.progress;
               bar.classList.remove("indeterminate");
               bar.style.width = pct + "%";
             }
@@ -2127,7 +2422,10 @@
         const meta = document.createElement("span");
         meta.className = "chat-panel-meta";
         const now = new Date();
-        meta.textContent = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+        meta.textContent = now.toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
 
         wrap.appendChild(bubble);
         wrap.appendChild(meta);
@@ -2192,7 +2490,8 @@
         if (list && list.children.length === 0) {
           const empty = document.createElement("div");
           empty.id = "chat-panel-empty";
-          empty.textContent = "No messages yet. Ask Claude anything about your board.";
+          empty.textContent =
+            "No messages yet. Ask Claude anything about your board.";
           list.appendChild(empty);
         }
 
@@ -2277,16 +2576,26 @@
       }
 
       function renderCard(task) {
-        const effectiveAgentId = (task.pipeline && task.pipeline.length > 0)
-          ? task.pipeline[task.pipeline_step || 0]
-          : task.agent_id;
+        const effectiveAgentId =
+          task.pipeline && task.pipeline.length > 0
+            ? task.pipeline[task.pipeline_step || 0]
+            : task.agent_id;
         const agent = state.agents.find((a) => a.id === effectiveAgentId);
-        const color = agent ? agent.color : (task.agent_id === null && !task.pipeline?.length ? "var(--accent)" : "#333");
+        const color = agent
+          ? agent.color
+          : task.agent_id === null && !task.pipeline?.length
+            ? "var(--accent)"
+            : "#333";
         const priorityClass = task.priority || "medium";
-        const agentName = agent ? agent.name : (task.agent_id === null ? "Auto" : "—");
-        const pipelineBadge = (task.pipeline && task.pipeline.length > 0)
-          ? `<div class="card-pipeline-badge">Step ${(task.pipeline_step || 0) + 1}/${task.pipeline.length}</div>`
-          : "";
+        const agentName = agent
+          ? agent.name
+          : task.agent_id === null
+            ? "Auto"
+            : "—";
+        const pipelineBadge =
+          task.pipeline && task.pipeline.length > 0
+            ? `<div class="card-pipeline-badge">Step ${(task.pipeline_step || 0) + 1}/${task.pipeline.length}</div>`
+            : "";
         return `
     <div class="task-card" id="card-${task.id}"
       style="border-left-color: ${color}"
@@ -2307,18 +2616,36 @@
         </div>
         <span class="card-date">${fmtDate(task.created_at)}</span>
       </div>
-      ${task.status === "in_progress" ? (() => {
-        const activity = task.activity || [];
-        const lastInProgressIdx = activity.reduce((last, a, i) =>
-          (a.type === "moved" && /^in progress/i.test(a.content)) ? i : last, -1);
-        const outputCount = activity.slice(lastInProgressIdx + 1).filter(a => a.type === "output").length;
-        const expectedSteps = (task.pipeline && task.pipeline.length > 0) ? task.pipeline.length + 1 : 1;
-        const pct = outputCount > 0
-          ? Math.round(Math.min(outputCount / expectedSteps, 1) * 100)
-          : (task.progress !== undefined ? task.progress : 0);
-        const isIndeterminate = outputCount === 0 && task.progress === undefined;
-        return `<div class="card-progress"><div class="card-progress-bar${isIndeterminate ? " indeterminate" : `" style="width:${pct}%`}"></div></div>`;
-      })() : ""}
+      ${
+        task.status === "in_progress"
+          ? (() => {
+              const activity = task.activity || [];
+              const lastInProgressIdx = activity.reduce(
+                (last, a, i) =>
+                  a.type === "moved" && /^in progress/i.test(a.content)
+                    ? i
+                    : last,
+                -1,
+              );
+              const outputCount = activity
+                .slice(lastInProgressIdx + 1)
+                .filter((a) => a.type === "output").length;
+              const expectedSteps =
+                task.pipeline && task.pipeline.length > 0
+                  ? task.pipeline.length + 1
+                  : 1;
+              const pct =
+                outputCount > 0
+                  ? Math.round(Math.min(outputCount / expectedSteps, 1) * 100)
+                  : task.progress !== undefined
+                    ? task.progress
+                    : 0;
+              const isIndeterminate =
+                outputCount === 0 && task.progress === undefined;
+              return `<div class="card-progress"><div class="card-progress-bar${isIndeterminate ? " indeterminate" : `" style="width:${pct}%`}"></div></div>`;
+            })()
+          : ""
+      }
     </div>
   `;
       }
@@ -2401,7 +2728,9 @@
         const footer = document.getElementById("task-modal-footer");
         const agentOptions = buildAgentOptions(task.agent_id);
         const existingPipeline = task.pipeline || [];
-        const pipelineStepsHTML = existingPipeline.map((agId) => buildPipelineStepRow(agId)).join("");
+        const pipelineStepsHTML = existingPipeline
+          .map((agId) => buildPipelineStepRow(agId))
+          .join("");
         body.innerHTML = `
     <div class="form-group">
       <label class="form-label">Title</label>
@@ -2511,7 +2840,6 @@
         renderBoard();
       }
 
-
       function selectPriorityTd(val, el) {
         document
           .querySelectorAll("#td-priority-group .radio-opt")
@@ -2527,7 +2855,11 @@
         task.status = "done";
         task.updated_at = new Date().toISOString();
         task.activity = task.activity || [];
-        task.activity.push({ timestamp: new Date().toISOString(), type: "moved", content: "Moved to Done" });
+        task.activity.push({
+          timestamp: new Date().toISOString(),
+          type: "moved",
+          content: "Moved to Done",
+        });
         addLog(taskId, `Task "${task.title}" moved to Done`);
         persistState();
         closeModal("task-modal");
@@ -2540,23 +2872,25 @@
 
       function buildChatSectionHTML(task) {
         const activity = (task.activity || []).slice();
-        const msgs = activity.map((a) => {
-          if (a.type === "chat_user") {
-            return `<div class="chat-msg user">
+        const msgs = activity
+          .map((a) => {
+            if (a.type === "chat_user") {
+              return `<div class="chat-msg user">
               <div class="chat-bubble">${escHtml(a.content)}</div>
               <span class="chat-meta">${fmtTs(a.timestamp)}</span>
             </div>`;
-          } else if (a.type === "output" || a.type === "chat_agent") {
-            return `<div class="chat-msg agent">
+            } else if (a.type === "output" || a.type === "chat_agent") {
+              return `<div class="chat-msg agent">
               <div class="chat-bubble">${escHtml(a.content)}</div>
               <span class="chat-meta">${fmtTs(a.timestamp)}</span>
             </div>`;
-          } else {
-            return `<div class="chat-msg system">
+            } else {
+              return `<div class="chat-msg system">
               <div class="chat-bubble">${escHtml(a.type)}: ${escHtml(a.content)}</div>
             </div>`;
-          }
-        }).join("");
+            }
+          })
+          .join("");
 
         return `
           <div class="activity-section">
@@ -2835,7 +3169,7 @@
         read: ["Read"],
         edit: ["Edit", "Write"],
         bash: ["Bash(*)"],
-        web:  ["WebFetch(*)", "WebSearch(*)"],
+        web: ["WebFetch(*)", "WebSearch(*)"],
       };
 
       let _permState = { read: false, edit: false, bash: false, web: false };
@@ -2904,7 +3238,8 @@
       }
 
       function toggleTheme() {
-        const isLight = document.documentElement.getAttribute("data-theme") === "light";
+        const isLight =
+          document.documentElement.getAttribute("data-theme") === "light";
         const next = isLight ? "dark" : "light";
         applyTheme(next);
         localStorage.setItem("tasker-theme", next);
@@ -2922,13 +3257,20 @@
       function updateThemeButton() {
         const knob = document.getElementById("theme-switch-knob");
         const moon = document.getElementById("icon-moon");
-        const sun  = document.getElementById("icon-sun");
+        const sun = document.getElementById("icon-sun");
         if (!knob) return;
-        const isLight = document.documentElement.getAttribute("data-theme") === "light";
+        const isLight =
+          document.documentElement.getAttribute("data-theme") === "light";
         knob.style.transform = isLight ? "translateX(16px)" : "translateX(0)";
-        knob.style.background = isLight ? "var(--accent)" : "var(--text-secondary)";
-        moon.style.color = isLight ? "var(--text-tertiary)" : "var(--text-primary)";
-        sun.style.color  = isLight ? "var(--text-primary)"  : "var(--text-tertiary)";
+        knob.style.background = isLight
+          ? "var(--accent)"
+          : "var(--text-secondary)";
+        moon.style.color = isLight
+          ? "var(--text-tertiary)"
+          : "var(--text-primary)";
+        sun.style.color = isLight
+          ? "var(--text-primary)"
+          : "var(--text-tertiary)";
       }
 
       // ─────────────────────────────────────────────────────────────────
@@ -2992,7 +3334,9 @@
       function collectPipelineSteps(containerId) {
         const container = document.getElementById(containerId);
         if (!container) return [];
-        return Array.from(container.querySelectorAll(".pipeline-step-row select"))
+        return Array.from(
+          container.querySelectorAll(".pipeline-step-row select"),
+        )
           .map((s) => s.value)
           .filter(Boolean);
       }

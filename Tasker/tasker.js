@@ -16,7 +16,9 @@ function projectPort(dir) {
   return 7843 + (Math.abs(h) % 2000);
 }
 
-const PORT = process.env.TASKER_PORT ? parseInt(process.env.TASKER_PORT) : projectPort(__dirname);
+const PORT = process.env.TASKER_PORT
+  ? parseInt(process.env.TASKER_PORT)
+  : projectPort(__dirname);
 const HTML_FILE = path.join(__dirname, "tasker.html");
 const STATE_FILE = path.join(__dirname, "tasks.json");
 const PROJECT_NAME = path.basename(path.dirname(__dirname));
@@ -24,12 +26,32 @@ const PROJECT_NAME = path.basename(path.dirname(__dirname));
 const DEFAULT_STATE = {
   tasks: [],
   agents: [
-    { id: "agent-researcher-default", name: "Researcher", role: "You are a research agent. Your job is to find information, audit codebases, summarize findings, and answer questions with cited sources. Be thorough and precise. Prefer facts over speculation.", color: "#3b82f6" },
-    { id: "agent-coder-default", name: "Coder", role: "You are a coding agent. Your job is to write, edit, debug, and explain code. Produce clean, working code with no unnecessary comments. Follow the existing conventions in the codebase.", color: "#10b981" },
-    { id: "agent-reviewer-default", name: "Reviewer", role: "You are a review agent. Your job is to review output from other agents, flag issues, identify improvements, and provide actionable feedback. Be direct and specific.", color: "#f59e0b" },
-    { id: "agent-writer-default", name: "Writer", role: "You are a writing agent. Your job is to write documentation, copy, summaries, and prose. Match the existing tone and style. Be clear and concise.", color: "#8b5cf6" }
+    {
+      id: "agent-researcher-default",
+      name: "Researcher",
+      role: "You are a research agent. Your job is to find information, audit codebases, summarize findings, and answer questions with cited sources. Be thorough and precise. Prefer facts over speculation.",
+      color: "#3b82f6",
+    },
+    {
+      id: "agent-coder-default",
+      name: "Coder",
+      role: "You are a coding agent. Your job is to write, edit, debug, and explain code. Produce clean, working code with no unnecessary comments. Follow the existing conventions in the codebase.",
+      color: "#10b981",
+    },
+    {
+      id: "agent-reviewer-default",
+      name: "Reviewer",
+      role: "You are a review agent. Your job is to review output from other agents, flag issues, identify improvements, and provide actionable feedback. Be direct and specific.",
+      color: "#f59e0b",
+    },
+    {
+      id: "agent-writer-default",
+      name: "Writer",
+      role: "You are a writing agent. Your job is to write documentation, copy, summaries, and prose. Match the existing tone and style. Be clear and concise.",
+      color: "#8b5cf6",
+    },
   ],
-  logs: []
+  logs: [],
 };
 
 // ─── Claude binary resolution ─────────────────────────────────────
@@ -38,19 +60,25 @@ const { execSync } = require("child_process");
 let CLAUDE_BIN = process.env.CLAUDE_BIN || null;
 if (!CLAUDE_BIN) {
   try {
-    CLAUDE_BIN = execSync("which claude", { shell: true, encoding: "utf8" }).trim();
+    CLAUDE_BIN = execSync("which claude", {
+      shell: true,
+      encoding: "utf8",
+    }).trim();
   } catch {
     CLAUDE_BIN = "npx";
   }
 }
-const CLAUDE_ARGS_PREFIX = (CLAUDE_BIN === "npx") ? ["@anthropic-ai/claude-code"] : [];
+const CLAUDE_ARGS_PREFIX =
+  CLAUDE_BIN === "npx" ? ["@anthropic-ai/claude-code"] : [];
 
 // ─── State ────────────────────────────────────────────────────────
 
 let appState = null;
 let paused = false;
 let lastHeartbeat = null;
-try { appState = JSON.parse(fs.readFileSync(STATE_FILE, "utf8")); } catch {}
+try {
+  appState = JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
+} catch {}
 
 // ─── SSE ─────────────────────────────────────────────────────────
 
@@ -59,7 +87,11 @@ const clients = new Set();
 function broadcast(event) {
   const data = `data: ${JSON.stringify(event)}\n\n`;
   for (const res of clients) {
-    try { res.write(data); } catch { clients.delete(res); }
+    try {
+      res.write(data);
+    } catch {
+      clients.delete(res);
+    }
   }
 }
 
@@ -79,26 +111,46 @@ function json(res, status, body) {
 // ─── Server ───────────────────────────────────────────────────────
 
 const server = http.createServer((req, res) => {
-  if (req.method === "OPTIONS") { res.writeHead(204, CORS); res.end(); return; }
+  if (req.method === "OPTIONS") {
+    res.writeHead(204, CORS);
+    res.end();
+    return;
+  }
 
   if (req.method === "GET" && req.url === "/") {
     try {
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
       res.end(fs.readFileSync(HTML_FILE, "utf8"));
     } catch {
-      res.writeHead(404); res.end("tasker.html not found in " + __dirname);
+      res.writeHead(404);
+      res.end("tasker.html not found in " + __dirname);
     }
     return;
   }
 
   if (req.method === "GET" && req.url === "/events") {
-    res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive", ...CORS });
-    res.write(`data: ${JSON.stringify({ type: "connected", state: appState, paused, lastHeartbeat, projectName: PROJECT_NAME })}\n\n`);
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+      ...CORS,
+    });
+    res.write(
+      `data: ${JSON.stringify({ type: "connected", state: appState, paused, lastHeartbeat, projectName: PROJECT_NAME })}\n\n`,
+    );
     clients.add(res);
     const hb = setInterval(() => {
-      try { res.write(": ping\n\n"); } catch { clearInterval(hb); clients.delete(res); }
+      try {
+        res.write(": ping\n\n");
+      } catch {
+        clearInterval(hb);
+        clients.delete(res);
+      }
     }, 25000);
-    req.on("close", () => { clearInterval(hb); clients.delete(res); });
+    req.on("close", () => {
+      clearInterval(hb);
+      clients.delete(res);
+    });
     return;
   }
 
@@ -135,7 +187,10 @@ const server = http.createServer((req, res) => {
       const { message } = JSON.parse(raw || "{}");
       paused = true;
       broadcast({ type: "tasker_state", paused: true });
-      broadcast({ type: "usage_cap", message: message || "Usage limit reached." });
+      broadcast({
+        type: "usage_cap",
+        message: message || "Usage limit reached.",
+      });
       json(res, 200, { ok: true, paused: true });
     });
     return;
@@ -148,18 +203,26 @@ const server = http.createServer((req, res) => {
   }
 
   if (req.method === "GET" && req.url === "/paused") {
-    if (!paused) { lastHeartbeat = Date.now(); broadcast({ type: "scan_heartbeat", lastHeartbeat }); }
+    if (!paused) {
+      lastHeartbeat = Date.now();
+      broadcast({ type: "scan_heartbeat", lastHeartbeat });
+    }
     return json(res, 200, { paused });
   }
 
   if (req.method === "POST" && req.url === "/next-scan") {
     let body = "";
-    req.on("data", d => body += d);
+    req.on("data", (d) => (body += d));
     req.on("end", () => {
       let parsed;
-      try { parsed = JSON.parse(body || "{}"); } catch { return json(res, 400, { error: "invalid JSON" }); }
+      try {
+        parsed = JSON.parse(body || "{}");
+      } catch {
+        return json(res, 400, { error: "invalid JSON" });
+      }
       const seconds = Number(parsed.seconds);
-      if (!Number.isFinite(seconds) || seconds <= 0) return json(res, 400, { error: "seconds must be a positive number" });
+      if (!Number.isFinite(seconds) || seconds <= 0)
+        return json(res, 400, { error: "seconds must be a positive number" });
       broadcast({ type: "next_scan", seconds });
       return json(res, 200, { ok: true });
     });
@@ -169,7 +232,14 @@ const server = http.createServer((req, res) => {
   if (req.method === "POST" && req.url === "/shutdown") {
     json(res, 200, { ok: true });
     broadcast({ type: "shutdown" });
-    setTimeout(() => { for (const r of clients) { try { r.end(); } catch {} } server.close(() => process.exit(0)); }, 200);
+    setTimeout(() => {
+      for (const r of clients) {
+        try {
+          r.end();
+        } catch {}
+      }
+      server.close(() => process.exit(0));
+    }, 200);
     return;
   }
 
@@ -177,7 +247,9 @@ const server = http.createServer((req, res) => {
     const settingsFile = path.join(__dirname, ".claude", "settings.json");
     try {
       const data = JSON.parse(fs.readFileSync(settingsFile, "utf8"));
-      return json(res, 200, { allow: (data.permissions && data.permissions.allow) || [] });
+      return json(res, 200, {
+        allow: (data.permissions && data.permissions.allow) || [],
+      });
     } catch {
       return json(res, 200, { allow: [] });
     }
@@ -193,7 +265,11 @@ const server = http.createServer((req, res) => {
         fs.mkdirSync(claudeDir, { recursive: true });
         const settingsFile = path.join(claudeDir, "settings.json");
         const settings = { permissions: { allow: body.allow || [] } };
-        fs.writeFileSync(settingsFile, JSON.stringify(settings, null, 2), "utf8");
+        fs.writeFileSync(
+          settingsFile,
+          JSON.stringify(settings, null, 2),
+          "utf8",
+        );
         json(res, 200, { ok: true });
       } catch (err) {
         json(res, 400, { error: err.message });
@@ -207,18 +283,23 @@ const server = http.createServer((req, res) => {
     req.on("data", (chunk) => (raw += chunk));
     req.on("end", () => {
       let body;
-      try { body = JSON.parse(raw); } catch { return json(res, 400, { error: "invalid JSON" }); }
+      try {
+        body = JSON.parse(raw);
+      } catch {
+        return json(res, 400, { error: "invalid JSON" });
+      }
 
       const message = (body.message || "").trim();
       if (!message) return json(res, 400, { error: "message is required" });
       const session_id = body.session_id || null;
 
-      const tasks = (appState && appState.tasks || [])
-        .map((t) => `  - [${t.status}] ${t.title}`)
-        .join("\n") || "  (no tasks)";
-      const agents = (appState && appState.agents || [])
-        .map((a) => a.name)
-        .join(", ") || "(none)";
+      const tasks =
+        ((appState && appState.tasks) || [])
+          .map((t) => `  - [${t.status}] ${t.title}`)
+          .join("\n") || "  (no tasks)";
+      const agents =
+        ((appState && appState.agents) || []).map((a) => a.name).join(", ") ||
+        "(none)";
 
       const systemPrompt =
         `You are a helpful assistant embedded in Tasker, a Claude Code task management board. ` +
@@ -227,18 +308,30 @@ const server = http.createServer((req, res) => {
         `Agents available: ${agents}. ` +
         `To update the board, POST to http://localhost:${PORT}/state with the full updated state JSON.`;
 
-      const args = ["--print", "--output-format", "stream-json", "--verbose",
-                    "--system-prompt", systemPrompt];
+      const args = [
+        "--print",
+        "--output-format",
+        "stream-json",
+        "--verbose",
+        "--system-prompt",
+        systemPrompt,
+      ];
       if (session_id) args.push("--resume", session_id);
       args.push(message);
 
-      const child = spawn(CLAUDE_BIN, [...CLAUDE_ARGS_PREFIX, ...args], { stdio: ["ignore", "pipe", "pipe"] });
+      const child = spawn(CLAUDE_BIN, [...CLAUDE_ARGS_PREFIX, ...args], {
+        stdio: ["ignore", "pipe", "pipe"],
+      });
 
       let stdout = "";
       let stderr = "";
       let replied = false;
-      child.stdout.on("data", (d) => { stdout += d; });
-      child.stderr.on("data", (d) => { stderr += d; });
+      child.stdout.on("data", (d) => {
+        stdout += d;
+      });
+      child.stderr.on("data", (d) => {
+        stderr += d;
+      });
 
       child.on("error", (err) => {
         if (replied) return;
@@ -265,7 +358,9 @@ const server = http.createServer((req, res) => {
           } catch {}
         }
         if (code !== 0 && !reply) {
-          return json(res, 500, { error: stderr.trim() || `claude exited with code ${code}` });
+          return json(res, 500, {
+            error: stderr.trim() || `claude exited with code ${code}`,
+          });
         }
         json(res, 200, { reply, session_id: newSessionId });
       });
@@ -296,11 +391,12 @@ if ! curl -s http://localhost:\$PORT/ > /dev/null 2>&1; then
 fi
 \`\`\``;
 
-  const openBrowserCmd = process.platform === "win32"
-    ? `start "" "http://localhost:\$PORT"`
-    : process.platform === "darwin"
-    ? `open "http://localhost:\$PORT"`
-    : `xdg-open "http://localhost:\$PORT"`;
+  const openBrowserCmd =
+    process.platform === "win32"
+      ? `start "" "http://localhost:\$PORT"`
+      : process.platform === "darwin"
+        ? `open "http://localhost:\$PORT"`
+        : `xdg-open "http://localhost:\$PORT"`;
 
   const queueSteps = `
 ## 2. Check the queue
@@ -452,15 +548,35 @@ curl -s -X POST http://localhost:\$PORT/shutdown
 
   try {
     fs.mkdirSync(commandsDir, { recursive: true });
-    fs.writeFileSync(path.join(commandsDir, "tasker.md"), taskerContent, "utf8");
+    fs.writeFileSync(
+      path.join(commandsDir, "tasker.md"),
+      taskerContent,
+      "utf8",
+    );
     console.log(`[tasker] Skill installed: /tasker`);
-    fs.writeFileSync(path.join(commandsDir, "tasker-scan.md"), scanContent, "utf8");
+    fs.writeFileSync(
+      path.join(commandsDir, "tasker-scan.md"),
+      scanContent,
+      "utf8",
+    );
     console.log(`[tasker] Skill installed: /tasker-scan`);
-    fs.writeFileSync(path.join(commandsDir, "tasker-watch.md"), watchContent, "utf8");
+    fs.writeFileSync(
+      path.join(commandsDir, "tasker-watch.md"),
+      watchContent,
+      "utf8",
+    );
     console.log(`[tasker] Skill installed: /tasker-watch`);
-    fs.writeFileSync(path.join(commandsDir, "tasker-pause.md"), pauseContent, "utf8");
+    fs.writeFileSync(
+      path.join(commandsDir, "tasker-pause.md"),
+      pauseContent,
+      "utf8",
+    );
     console.log(`[tasker] Skill installed: /tasker-pause`);
-    fs.writeFileSync(path.join(commandsDir, "tasker-stop.md"), stopContent, "utf8");
+    fs.writeFileSync(
+      path.join(commandsDir, "tasker-stop.md"),
+      stopContent,
+      "utf8",
+    );
     console.log(`[tasker] Skill installed: /tasker-stop`);
   } catch (err) {
     console.warn(`[tasker] Could not install skills: ${err.message}`);
@@ -483,10 +599,26 @@ if (process.argv[2] === "port") {
     console.log(`[tasker] Running at http://localhost:${PORT}`);
     console.log(`[tasker] Press Ctrl+C to stop.`);
   });
-  process.on("SIGINT", () => { for (const res of clients) { try { res.end(); } catch {} } server.close(() => process.exit(0)); });
-  process.on("SIGTERM", () => { for (const res of clients) { try { res.end(); } catch {} } server.close(() => process.exit(0)); });
+  process.on("SIGINT", () => {
+    for (const res of clients) {
+      try {
+        res.end();
+      } catch {}
+    }
+    server.close(() => process.exit(0));
+  });
+  process.on("SIGTERM", () => {
+    for (const res of clients) {
+      try {
+        res.end();
+      } catch {}
+    }
+    server.close(() => process.exit(0));
+  });
 } else if (!process.argv[2]) {
   console.log(`\nNext steps:`);
-  console.log(`  1. Reload VS Code — open the command palette and run "Reload Window"`);
+  console.log(
+    `  1. Reload VS Code — open the command palette and run "Reload Window"`,
+  );
   console.log(`  2. Run /tasker in Claude Code\n`);
 }

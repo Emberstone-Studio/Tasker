@@ -1,12 +1,12 @@
 # Tasker
 
-A local-first kanban board for Claude Code agents. Create tasks on the board, run `/tasker` in Claude Code to execute them, and review the output — all without leaving your editor.
+A kanban board for Claude Code agents. Run `/tasker` in Claude Code to create, review, and execute tasks — all without leaving your editor.
 
 ![Tasker board](https://raw.githubusercontent.com/Emberstone-Studio/Tasker/main/tasker-screen1.png)
 
 ## Requirements
 
-- Node.js 18 or later (no `npm install` needed)
+- [Node.js](https://nodejs.org/en)
 - [VS Code](https://code.visualstudio.com/download)
 - [Claude Code](https://claude.com/product/claude-code)
 
@@ -40,7 +40,7 @@ Tasks move through five columns:
 | **Backlog** | Not ready yet |
 | **Ready** | Queued for execution — Claude Code will pick these up |
 | **In Progress** | Claude Code is working on it |
-| **In Review** | Done — review the output, then move to Done |
+| **In Review** | Review the output, then move to Done or back into the queue with new comments |
 | **Done** | Complete |
 
 Drag cards between columns at any time. Click the **+** in any column header to add a task directly into that column.
@@ -85,7 +85,7 @@ The card shows a **Step N/M** badge while a pipeline task is in progress, and th
 
 ## Claude Code skills
 
-Running `node tasker.js` installs five skills into `~/.claude/commands/`:
+Running `Install-Mac.command` or `Install-Windows.bat` installs five skills into `~/.claude/commands/`:
 
 | Skill | Purpose |
 |---|---|
@@ -129,10 +129,8 @@ If an agent returns an error indicating a rate limit or usage cap, the team lead
 
 The top bar shows the current status and a **countdown** to the next scan. Two control buttons appear when the server is running:
 
-- **Pause** (‖) — stops the loop after the current scan; the board shows "Paused — run: /tasker-scan"
-- **Stop** (⏻) — shuts down the server entirely
-
-To resume after pausing, run `/tasker-scan` in Claude Code. It always resumes the loop and clears the paused state before scanning.
+- **Pause** (‖) — stops the loop after the current scan; the board shows "Paused — run: /tasker-scan". To resume, run `/tasker-scan` in Claude Code. It always resumes the loop and clears the paused state before scanning.
+- **Stop** (⏻) — shuts down the server entirely; the board shows "Offline - run: /tasker". To resume, run `/tasker` in Claude Code. It will restart the server, re-open the board, and initiate `/tasker-scan`.
 
 ## Chat panel
 
@@ -156,11 +154,11 @@ Open the **Settings** panel (⚙) to:
 | Bash commands | `Bash(*)` |
 | Web access | `WebFetch(*)`, `WebSearch(*)` |
 
-Note: to export state, copy `Tasker/tasks.json` directly.
-
 ## Data
 
 State is persisted in `Tasker/tasks.json` and synced to the browser in real time over SSE. The file is written on every state change.
+
+Note: to export state, copy `Tasker/tasks.json` directly.
 
 ## Files
 
@@ -174,7 +172,6 @@ State is persisted in `Tasker/tasks.json` and synced to the browser in real time
 | `<project>/Tasker/tasker.html` | Per-project UI (copied from master on first `/tasker` run) |
 | `<project>/Tasker/README.md` | Per-project readme (copied from master on first `/tasker` run) |
 | `<project>/Tasker/tasks.json` | Per-project task state (created on first server start) |
-| `<project>/.claude/settings.json` | Per-project agent permissions |
 
 ---
 
