@@ -1,0 +1,3048 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tasker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <script id="app-state" type="application/json">
+      {
+        "tasks": [],
+        "agents": [
+          {
+            "id": "agent-researcher-default",
+            "name": "Researcher",
+            "role": "You are a research agent. Your job is to find information, audit codebases, summarize findings, and answer questions with cited sources. Be thorough and precise. Prefer facts over speculation.",
+            "color": "#3b82f6"
+          },
+          {
+            "id": "agent-coder-default",
+            "name": "Coder",
+            "role": "You are a coding agent. Your job is to write, edit, debug, and explain code. Produce clean, working code with no unnecessary comments. Follow the existing conventions in the codebase.",
+            "color": "#10b981"
+          },
+          {
+            "id": "agent-reviewer-default",
+            "name": "Reviewer",
+            "role": "You are a review agent. Your job is to review output from other agents, flag issues, identify improvements, and provide actionable feedback. Be direct and specific.",
+            "color": "#f59e0b"
+          },
+          {
+            "id": "agent-writer-default",
+            "name": "Writer",
+            "role": "You are a writing agent. Your job is to write documentation, copy, summaries, and prose. Match the existing tone and style. Be clear and concise.",
+            "color": "#8b5cf6"
+          }
+        ],
+        "logs": []
+      }
+    </script>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg: #050505;
+        --bg-input: #0d0d0d;
+        --bg-subtle: #0d0d0d;
+        --bg-badge: #1e1e1e;
+        --card-bg: #141414;
+        --card-bg-hover: #1a1a1a;
+        --border: #2a2a2a;
+        --border-hover: #444444;
+        --scrollbar: #333333;
+        --scrollbar-hover: #444444;
+        --toggle-bg: #222222;
+        --toggle-border: #3a3a3a;
+        --accent: #5865f2;
+        --accent-hover: #4752c4;
+        --text-primary: #f0f0f0;
+        --text-secondary: #888888;
+        --text-tertiary: #555555;
+        --danger: #ef4444;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --warn-bg: rgba(245, 158, 11, 0.1);
+        --warn-text: #f59e0b;
+        --font-mono: "JetBrains Mono", "Fira Mono", "Courier New", monospace;
+        --font-ui:
+          system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      [data-theme="light"] {
+        --bg: #e8e8e8;
+        --bg-input: #ffffff;
+        --bg-subtle: #dedede;
+        --bg-badge: #d4d4d4;
+        --card-bg: #ffffff;
+        --card-bg-hover: #f0f0f0;
+        --border: #c8c8c8;
+        --border-hover: #999999;
+        --scrollbar: #bbbbbb;
+        --scrollbar-hover: #999999;
+        --toggle-bg: #d4d4d4;
+        --toggle-border: #bbbbbb;
+        --text-primary: #111111;
+        --text-secondary: #555555;
+        --text-tertiary: #999999;
+        --warn-bg: rgba(180, 100, 0, 0.08);
+        --warn-text: #b45309;
+      }
+
+      html,
+      body {
+        height: 100%;
+        background: var(--bg);
+        color: var(--text-primary);
+        font-family: var(--font-ui);
+        font-size: 14px;
+        line-height: 1.5;
+        overflow: hidden;
+      }
+
+      /* Scrollbar */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--scrollbar);
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--scrollbar-hover);
+      }
+
+      /* ─── TOP BAR ──────────────────────────────────────── */
+      #topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 48px;
+        padding: 0 16px;
+        border-bottom: 1px solid var(--border);
+        background: var(--bg-subtle);
+        position: relative;
+        z-index: 100;
+        flex-shrink: 0;
+      }
+
+      #topbar-left {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      #logo-icon {
+        width: 26px;
+        height: 26px;
+        flex-shrink: 0;
+        color: var(--text-primary);
+        margin-right: 6px;
+      }
+
+      #logo {
+        font-size: 13px;
+        font-weight: 600;
+        font-family: "Verdana", sans-serif;
+        color: var(--text-primary);
+        letter-spacing: -0.3px;
+        margin-right: 12px;
+      }
+
+      .tab-btn {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 13px;
+        font-family: var(--font-ui);
+        padding: 6px 12px;
+        transition: color 0.15s;
+        position: relative;
+      }
+
+      .tab-btn:hover {
+        color: var(--text-primary);
+      }
+
+      .tab-btn.active {
+        color: var(--text-primary);
+      }
+
+      .tab-btn.active::after {
+        content: "";
+        position: absolute;
+        bottom: -10px;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: var(--accent);
+      }
+
+      #topbar-center {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 12px;
+        font-family: var(--font-ui);
+        color: var(--text-secondary);
+        pointer-events: none;
+        white-space: nowrap;
+      }
+
+      #topbar-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      #watcher-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 11px;
+        font-family: var(--font-mono);
+        color: var(--text-secondary);
+        cursor: pointer;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+
+      #scan-countdown {
+        font-size: 11px;
+        font-family: var(--font-mono);
+        color: var(--text-tertiary);
+        display: none;
+        align-items: center;
+        white-space: nowrap;
+      }
+
+      #watcher-status.disconnected,
+      #watcher-status.paused {
+        cursor: default;
+        opacity: 0.5;
+      }
+
+      .topbar-btn {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        padding: 6px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: color 0.15s, background 0.15s;
+        line-height: 1;
+      }
+
+      .topbar-btn:hover {
+        color: var(--text-primary);
+        background: var(--bg-subtle);
+      }
+
+      #btn-pause:hover { color: var(--warning); }
+      #btn-stop:hover { color: var(--danger); }
+
+      /* ─── MAIN LAYOUT ───────────────────────────────────── */
+      #app {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+      }
+
+      #content-wrapper {
+        flex: 1;
+        display: flex;
+        overflow: hidden;
+      }
+
+      #main {
+        flex: 1;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .tab-panel {
+        display: none;
+        flex: 1;
+        overflow: hidden;
+      }
+
+      .tab-panel.active {
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* ─── BOARD TAB ─────────────────────────────────────── */
+      #tasks-panel {
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 16px;
+      }
+
+      #tasks-columns {
+        display: flex;
+        gap: 12px;
+        height: 100%;
+        min-width: max-content;
+      }
+
+      .column {
+        width: 280px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        background: var(--bg-subtle);
+        border: 1px solid var(--border);
+      }
+
+      .column-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+      }
+
+      .column-title {
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .col-count {
+        background: var(--bg-badge);
+        border: 1px solid var(--border);
+        color: var(--text-secondary);
+        font-size: 10px;
+        padding: 1px 6px;
+        font-family: var(--font-mono);
+      }
+
+      .btn-add-task {
+        background: none;
+        border: none;
+        color: var(--text-tertiary);
+        cursor: pointer;
+        font-size: 18px;
+        line-height: 1;
+        padding: 0 2px;
+        transition: color 0.15s;
+      }
+
+      .btn-add-task:hover {
+        color: var(--text-primary);
+      }
+
+      .column-cards {
+        flex: 1;
+        overflow-y: auto;
+        padding: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-height: 60px;
+      }
+
+      .column-cards.drag-over {
+        background: rgba(88, 101, 242, 0.05);
+        outline: 1px dashed var(--accent);
+        outline-offset: -4px;
+      }
+
+      /* ─── TASK CARDS ────────────────────────────────────── */
+      .task-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-left: 3px solid var(--text-tertiary);
+        padding: 10px 10px 10px 12px;
+        cursor: pointer;
+        position: relative;
+        transition:
+          border-color 0.15s,
+          background 0.15s;
+        user-select: none;
+      }
+
+      .task-card:hover {
+        border-color: var(--border-hover);
+        border-left-color: inherit;
+        background: var(--card-bg-hover);
+      }
+
+      .task-card.dragging {
+        opacity: 0.4;
+      }
+
+      .card-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 6px;
+      }
+
+      .card-title {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-primary);
+        line-height: 1.4;
+        flex: 1;
+      }
+
+      .priority-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        margin-top: 4px;
+      }
+
+      .priority-dot.high {
+        background: #ef4444;
+      }
+      .priority-dot.medium {
+        background: #f59e0b;
+      }
+      .priority-dot.low {
+        background: var(--text-tertiary);
+      }
+
+      .card-desc {
+        font-size: 12px;
+        color: var(--text-secondary);
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        line-height: 1.5;
+        margin-bottom: 8px;
+      }
+
+      .card-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .card-agent-info {
+        font-size: 11px;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+        overflow: hidden;
+      }
+
+      .agent-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      .card-agent-name {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .card-date {
+        font-size: 10px;
+        color: var(--text-tertiary);
+        font-family: var(--font-mono);
+        flex-shrink: 0;
+      }
+
+      /* ─── AGENTS TAB ────────────────────────────────────── */
+      #agents-panel {
+        overflow-y: auto;
+        padding: 20px;
+      }
+
+      .panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+      }
+
+      .panel-title {
+        font-size: 16px;
+        font-weight: 600;
+      }
+
+      .btn-primary,
+      .btn-secondary,
+      .btn-danger {
+        cursor: pointer;
+        font-size: 13px;
+        font-family: var(--font-ui);
+        font-weight: 500;
+        padding: 7px 16px;
+        transition: all 0.15s;
+        white-space: nowrap;
+      }
+
+      .btn-primary {
+        background: var(--accent);
+        border: none;
+        color: #fff;
+      }
+
+      .btn-primary:hover {
+        background: var(--accent-hover);
+      }
+
+      .btn-secondary {
+        background: none;
+        border: 1px solid var(--border);
+        color: var(--text-secondary);
+      }
+
+      .btn-secondary:hover {
+        border-color: var(--border-hover);
+        color: var(--text-primary);
+      }
+
+      .btn-danger {
+        background: none;
+        border: 1px solid transparent;
+        color: var(--text-secondary);
+      }
+
+      .btn-danger:hover {
+        border-color: var(--danger);
+        color: var(--danger);
+      }
+
+      #agents-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 12px;
+      }
+
+      .agent-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        padding: 16px;
+        border-left: 3px solid var(--text-tertiary);
+      }
+
+      .agent-card-top {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+
+      .agent-color-swatch {
+        width: 28px;
+        height: 28px;
+        flex-shrink: 0;
+      }
+
+      .agent-name {
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .agent-role-preview {
+        font-size: 12px;
+        color: var(--text-secondary);
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        margin-bottom: 10px;
+        line-height: 1.5;
+      }
+
+      .agent-card-actions {
+        display: flex;
+        gap: 6px;
+      }
+
+      /* ─── LOG TAB ───────────────────────────────────────── */
+      #log-panel {
+        overflow-y: auto;
+        padding: 16px;
+        gap: 2px;
+      }
+
+      .log-entry {
+        display: flex;
+        gap: 12px;
+        padding: 5px 8px;
+        border-bottom: 1px solid var(--card-bg-hover);
+        font-family: var(--font-mono);
+        font-size: 12px;
+        align-items: flex-start;
+      }
+
+      .log-entry:hover {
+        background: var(--card-bg);
+      }
+
+      .log-ts {
+        color: var(--text-tertiary);
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
+      .log-msg {
+        color: var(--text-secondary);
+      }
+      .log-msg.task-ref {
+        color: var(--text-primary);
+      }
+
+      #log-empty {
+        color: var(--text-tertiary);
+        font-family: var(--font-mono);
+        font-size: 12px;
+        padding: 20px 8px;
+      }
+
+      /* ─── MODALS ────────────────────────────────────────── */
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 500;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+
+      .modal-overlay.hidden {
+        display: none;
+      }
+
+      .modal {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        width: 100%;
+        max-width: 580px;
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+      }
+
+      .modal.modal-wide {
+        max-width: 720px;
+      }
+
+      .modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+      }
+
+      .modal-title {
+        font-size: 15px;
+        font-weight: 600;
+      }
+
+      .btn-close {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 20px;
+        line-height: 1;
+        padding: 2px 4px;
+        transition: color 0.15s;
+      }
+
+      .btn-close:hover {
+        color: var(--text-primary);
+      }
+
+      .modal-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+      }
+
+      .modal-footer {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        padding: 12px 20px;
+        border-top: 1px solid var(--border);
+        flex-shrink: 0;
+      }
+
+      /* ─── FORM ELEMENTS ─────────────────────────────────── */
+      .form-group {
+        margin-bottom: 16px;
+      }
+
+      .form-label {
+        display: block;
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-bottom: 6px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .form-hint {
+        font-size: 11px;
+        color: var(--text-secondary);
+        margin-top: 5px;
+        line-height: 1.4;
+      }
+
+      .form-input,
+      .form-select,
+      .form-textarea {
+        width: 100%;
+        background: var(--bg-input);
+        border: 1px solid var(--border);
+        color: var(--text-primary);
+        font-size: 13px;
+        font-family: var(--font-ui);
+        padding: 8px 10px;
+        outline: none;
+        transition: border-color 0.15s;
+      }
+
+      .form-input:focus,
+      .form-select:focus,
+      .form-textarea:focus {
+        border-color: var(--accent);
+      }
+
+      .form-textarea {
+        resize: vertical;
+        min-height: 80px;
+        font-family: var(--font-ui);
+      }
+
+      .form-textarea.mono {
+        font-family: var(--font-mono);
+        font-size: 12px;
+      }
+
+      .form-select {
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        padding-right: 28px;
+        cursor: pointer;
+      }
+
+      .form-select option {
+        background: var(--bg-badge);
+        color: var(--text-primary);
+      }
+
+      .range-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .form-range {
+        flex: 1;
+        -webkit-appearance: none;
+        height: 3px;
+        background: var(--border);
+        outline: none;
+        cursor: pointer;
+      }
+
+      .form-range::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 14px;
+        height: 14px;
+        background: var(--accent);
+        cursor: pointer;
+      }
+
+      .range-val {
+        font-size: 12px;
+        font-family: var(--font-mono);
+        color: var(--text-secondary);
+        min-width: 28px;
+        text-align: right;
+      }
+
+      .radio-group {
+        display: flex;
+        gap: 8px;
+      }
+
+      .radio-opt {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border: 1px solid var(--border);
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+
+      .radio-opt:hover {
+        border-color: var(--border-hover);
+      }
+      .radio-opt.selected {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .radio-opt input {
+        display: none;
+      }
+
+      .radio-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+      }
+
+      /* ─── ACTIVITY LOG in modal ─────────────────────────── */
+      .activity-section {
+        margin-top: 20px;
+        border-top: 1px solid var(--border);
+        padding-top: 16px;
+      }
+
+      .activity-title {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        color: var(--text-secondary);
+        margin-bottom: 10px;
+      }
+
+      .activity-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        max-height: 480px;
+        overflow-y: auto;
+      }
+
+      .activity-item {
+        display: flex;
+        gap: 10px;
+        font-size: 11px;
+        font-family: var(--font-mono);
+        padding: 6px 0;
+        border-bottom: 1px solid var(--bg-badge);
+      }
+
+      .activity-item.type-output {
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .activity-item.type-output .activity-meta {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .activity-ts {
+        color: var(--text-tertiary);
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
+      .activity-content {
+        color: var(--text-secondary);
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .activity-item.type-output .activity-content {
+        background: var(--bg-subtle);
+        border: 1px solid var(--border);
+        padding: 10px 12px;
+        color: var(--text-primary);
+        font-size: 12px;
+        line-height: 1.6;
+      }
+
+      .activity-type {
+        padding: 1px 5px;
+        font-size: 10px;
+        border: 1px solid var(--border);
+        color: var(--text-tertiary);
+        flex-shrink: 0;
+      }
+
+
+      /* ─── MOVE TO DONE BUTTON ───────────────────────────── */
+      .btn-move-done {
+        background: var(--success);
+        border: none;
+        color: #fff;
+        cursor: pointer;
+        font-size: 13px;
+        font-family: var(--font-ui);
+        font-weight: 500;
+        padding: 7px 16px;
+        transition: all 0.15s;
+        white-space: nowrap;
+      }
+
+      .btn-move-done:hover {
+        background: #059669;
+      }
+
+      /* ─── PROGRESS BAR ──────────────────────────────────── */
+      .card-progress {
+        margin-top: 8px;
+        height: 4px;
+        background: var(--bg-badge);
+        border-radius: 2px;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .card-progress-bar {
+        height: 100%;
+        background: var(--accent);
+        border-radius: 2px;
+        transition: width 0.5s ease;
+        width: 0%;
+      }
+
+      @keyframes card-indeterminate {
+        0%   { transform: translateX(-200%); }
+        100% { transform: translateX(400%); }
+      }
+
+      .card-progress-bar.indeterminate {
+        width: 35%;
+        animation: card-indeterminate 1.4s ease-in-out infinite;
+      }
+
+      /* ─── CHAT THREAD ───────────────────────────────────── */
+      .chat-messages {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-height: 360px;
+        overflow-y: auto;
+        margin-bottom: 10px;
+        padding-right: 4px;
+      }
+
+      .chat-msg { display: flex; flex-direction: column; gap: 3px; max-width: 85%; }
+      .chat-msg.user  { align-self: flex-end;   align-items: flex-end; }
+      .chat-msg.agent { align-self: flex-start; align-items: flex-start; max-width: 100%; }
+      .chat-msg.system { align-self: center; align-items: center; max-width: 100%; width: 100%; }
+
+      .chat-bubble {
+        padding: 8px 12px;
+        font-size: 12px;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .chat-msg.user .chat-bubble {
+        background: rgba(88, 101, 242, 0.12);
+        border: 1px solid rgba(88, 101, 242, 0.25);
+        color: var(--text-primary);
+      }
+
+      .chat-msg.agent .chat-bubble {
+        background: var(--bg-subtle);
+        border: 1px solid var(--border);
+        color: var(--text-primary);
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+      }
+
+      .chat-msg.system .chat-bubble {
+        background: transparent;
+        border: none;
+        color: var(--text-tertiary);
+        font-size: 10px;
+        font-family: var(--font-mono);
+        padding: 1px 0;
+        text-align: center;
+      }
+
+      .chat-meta {
+        font-size: 10px;
+        color: var(--text-tertiary);
+        font-family: var(--font-mono);
+      }
+
+      .chat-input-row {
+        display: flex;
+        gap: 8px;
+        align-items: flex-end;
+      }
+
+      .chat-input {
+        flex: 1;
+        background: var(--bg-input);
+        border: 1px solid var(--border);
+        color: var(--text-primary);
+        font-size: 13px;
+        font-family: var(--font-ui);
+        padding: 8px 10px;
+        outline: none;
+        resize: none;
+        min-height: 36px;
+        line-height: 1.4;
+        transition: border-color 0.15s;
+      }
+
+      .chat-input:focus { border-color: var(--accent); }
+
+      .btn-send {
+        background: var(--accent);
+        border: none;
+        color: #fff;
+        cursor: pointer;
+        font-size: 13px;
+        font-family: var(--font-ui);
+        font-weight: 500;
+        padding: 7px 14px;
+        transition: background 0.15s;
+        flex-shrink: 0;
+        height: 36px;
+      }
+
+      .btn-send:hover { background: var(--accent-hover); }
+      .btn-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+      /* ─── SETTINGS MODAL ────────────────────────────────── */
+      .settings-section {
+        margin-bottom: 24px;
+      }
+
+      .settings-section-title {
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        color: var(--text-secondary);
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .warning-banner {
+        background: rgba(245, 158, 11, 0.08);
+        border: 1px solid rgba(245, 158, 11, 0.25);
+        padding: 10px 14px;
+        font-size: 12px;
+        color: #f59e0b;
+        margin-bottom: 16px;
+      }
+
+      .color-presets {
+        display: flex;
+        gap: 8px;
+        margin-top: 6px;
+      }
+
+      .color-preset {
+        width: 24px;
+        height: 24px;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: border-color 0.15s;
+      }
+
+      .color-preset:hover,
+      .color-preset.selected {
+        border-color: var(--text-primary);
+      }
+
+      /* ─── SPLASH OVERLAY ────────────────────────────────── */
+
+      /* ─── COLOR PICKER ──────────────────────────────────── */
+      .color-input-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      input[type="color"] {
+        width: 36px;
+        height: 28px;
+        border: 1px solid var(--border);
+        background: var(--card-bg);
+        cursor: pointer;
+        padding: 2px;
+      }
+
+      /* ─── DIVIDERS ──────────────────────────────────────── */
+      .divider {
+        height: 1px;
+        background: var(--border);
+        margin: 16px 0;
+      }
+
+      /* ─── PIPELINE BADGE ───────────────────────────────── */
+      .card-pipeline-badge {
+        font-size: 10px;
+        font-family: var(--font-mono);
+        color: var(--text-tertiary);
+        margin-top: 4px;
+      }
+
+      /* ─── PIPELINE BUILDER ──────────────────────────────── */
+      .pipeline-steps {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 8px;
+      }
+
+      .pipeline-step-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .pipeline-step-row .form-select {
+        flex: 1;
+      }
+
+      .btn-remove-step {
+        background: none;
+        border: 1px solid var(--border);
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 14px;
+        line-height: 1;
+        padding: 4px 8px;
+        flex-shrink: 0;
+        transition: all 0.15s;
+      }
+
+      .btn-remove-step:hover {
+        border-color: var(--danger);
+        color: var(--danger);
+      }
+
+      .btn-add-step {
+        background: none;
+        border: 1px solid var(--border);
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 12px;
+        font-family: var(--font-ui);
+        padding: 5px 10px;
+        transition: all 0.15s;
+      }
+
+      .btn-add-step:hover {
+        border-color: var(--border-hover);
+        color: var(--text-primary);
+      }
+
+      .pipeline-hint {
+        margin-bottom: 8px;
+      }
+
+      /* ─── USAGE CAP BANNER ─────────────────────────────────── */
+      #usage-cap-banner {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 16px;
+        background: var(--warn-bg);
+        border-bottom: 1px solid rgba(245, 158, 11, 0.3);
+        color: var(--warn-text);
+        font-size: 13px;
+        flex-shrink: 0;
+      }
+
+      #usage-cap-message {
+        flex: 1;
+      }
+
+      #btn-usage-cap-resume {
+        background: var(--warn-text);
+        border: none;
+        color: #fff;
+        cursor: pointer;
+        font-size: 12px;
+        font-family: var(--font-ui);
+        font-weight: 500;
+        padding: 5px 12px;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
+      #btn-usage-cap-dismiss {
+        background: none;
+        border: none;
+        color: var(--warn-text);
+        cursor: pointer;
+        font-size: 18px;
+        line-height: 1;
+        padding: 0 2px;
+        opacity: 0.7;
+      }
+
+      #btn-usage-cap-dismiss:hover {
+        opacity: 1;
+      }
+
+      /* ─── MISC UTILS ────────────────────────────────────── */
+      .hidden {
+        display: none !important;
+      }
+      .text-danger {
+        color: var(--danger);
+      }
+      .text-secondary {
+        color: var(--text-secondary);
+      }
+      .text-mono {
+        font-family: var(--font-mono);
+      }
+      .mt-4 {
+        margin-top: 4px;
+      }
+      .mt-8 {
+        margin-top: 8px;
+      }
+      .mb-0 {
+        margin-bottom: 0 !important;
+      }
+      .full-width {
+        width: 100%;
+      }
+
+      /* ─── PERMISSION TOGGLES ────────────────────────────── */
+      .perm-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .perm-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .perm-label {
+        font-size: 13px;
+        color: var(--text-primary);
+      }
+
+      .perm-hint {
+        font-size: 11px;
+        color: var(--text-tertiary);
+        font-family: var(--font-mono);
+        margin-top: 1px;
+      }
+
+      .perm-toggle {
+        flex-shrink: 0;
+        width: 36px;
+        height: 20px;
+        border-radius: 10px;
+        background: var(--toggle-bg);
+        border: 1px solid var(--toggle-border);
+        position: relative;
+        cursor: pointer;
+        transition: background 0.2s, border-color 0.2s;
+      }
+
+      .perm-toggle.on {
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+
+      .perm-toggle-knob {
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--text-secondary);
+        transition: transform 0.2s, background 0.2s;
+      }
+
+      .perm-toggle.on .perm-toggle-knob {
+        transform: translateX(16px);
+        background: #fff;
+      }
+
+      /* ─── CHAT PANEL (slide-in) ─────────────────────────── */
+      #chat-panel {
+        width: 0;
+        flex-shrink: 0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        background: var(--bg-subtle);
+        border-left: 1px solid transparent;
+        transition: width 0.22s ease, border-color 0.22s ease;
+      }
+
+      #chat-panel.open {
+        width: 340px;
+        border-color: var(--border);
+      }
+
+      #btn-chat-toggle.active {
+        color: var(--text-primary);
+        background: var(--bg-subtle);
+      }
+
+      #chat-panel-inner {
+        width: 340px;
+        min-width: 340px;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+
+      #chat-panel-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      #chat-panel-input-row {
+        display: flex;
+        gap: 8px;
+        align-items: flex-end;
+        padding: 12px 16px;
+        border-top: 1px solid var(--border);
+        flex-shrink: 0;
+      }
+
+      #chat-panel-input-row .chat-input {
+        max-height: 140px;
+        overflow-y: auto;
+      }
+
+      .chat-panel-msg {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        max-width: 75%;
+      }
+
+      .chat-panel-msg.user {
+        align-self: flex-end;
+        align-items: flex-end;
+      }
+
+      .chat-panel-msg.assistant {
+        align-self: flex-start;
+        align-items: flex-start;
+        max-width: 85%;
+      }
+
+      .chat-panel-msg.error {
+        align-self: center;
+        align-items: center;
+        max-width: 90%;
+      }
+
+      .chat-panel-bubble {
+        padding: 8px 12px;
+        font-size: 13px;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .chat-panel-msg.user .chat-panel-bubble {
+        background: rgba(88, 101, 242, 0.15);
+        border: 1px solid rgba(88, 101, 242, 0.3);
+        color: var(--text-primary);
+      }
+
+      .chat-panel-msg.assistant .chat-panel-bubble {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        color: var(--text-primary);
+      }
+
+      .chat-panel-msg.error .chat-panel-bubble {
+        background: rgba(239, 68, 68, 0.08);
+        border: 1px solid rgba(239, 68, 68, 0.25);
+        color: var(--danger);
+        font-size: 12px;
+        font-family: var(--font-mono);
+      }
+
+      .chat-panel-meta {
+        font-size: 10px;
+        color: var(--text-tertiary);
+        font-family: var(--font-mono);
+      }
+
+      .chat-panel-thinking {
+        color: var(--text-tertiary);
+        font-size: 12px;
+        font-family: var(--font-mono);
+        font-style: italic;
+        padding: 4px 0;
+        align-self: flex-start;
+      }
+
+      #chat-panel-empty {
+        color: var(--text-tertiary);
+        font-size: 12px;
+        font-family: var(--font-mono);
+        padding: 20px 0;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ─── MAIN APP ───────────────────────────────────────── -->
+    <div id="app">
+      <!-- Usage Cap Banner -->
+      <div id="usage-cap-banner" class="hidden">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span id="usage-cap-message"></span>
+        <button type="button" id="btn-usage-cap-resume" onclick="resumeFromUsageCap()">Resume</button>
+        <button type="button" id="btn-usage-cap-dismiss" onclick="dismissUsageCapBanner()" title="Dismiss">&times;</button>
+      </div>
+
+      <!-- Top Bar -->
+      <div id="topbar">
+        <div id="topbar-left">
+          <svg id="logo-icon" viewBox="0 0 100 100" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <path d="M22.74,68.64l-2.65-1.18.02,12.45c1.91,1.06,3.11,3.03,2.63,5.17s-2.25,3.57-4.39,3.6-3.97-1.37-4.51-3.45.58-4.23,2.56-5.31v-19.19c.02-3.91,2.58-7.12,6.33-8.07,0,0,.08,18.28,0,15.98Z"/>
+            <path d="M77.26,52.65c3.75.95,6.31,4.17,6.32,8.07v19.19c1.99,1.08,3.13,3.14,2.57,5.31s-2.36,3.48-4.51,3.45-3.92-1.54-4.39-3.6.71-4.1,2.63-5.17l.02-12.45-2.65,1.18c-.08,2.3,0-15.98,0-15.98Z"/>
+            <path d="M65.29,91.07c-7.91,6-18.24,6.87-26.92,2.29-8.69-4.61-14.45-13.47-14.48-23.42l-.05-17.29h52.32s-.02,16.96-.02,16.96c0,8.42-4.15,16.38-10.85,21.46ZM58.04,60.94c0-1.07-.87-1.94-1.94-1.94s-1.94.87-1.94,1.94.87,1.94,1.94,1.94,1.94-.87,1.94-1.94ZM64.02,60.94c0-1.07-.87-1.94-1.94-1.94s-1.94.87-1.94,1.94.87,1.94,1.94,1.94,1.94-.87,1.94-1.94ZM69.98,60.93c0-1.07-.87-1.94-1.94-1.94s-1.94.87-1.94,1.94.87,1.94,1.94,1.94,1.94-.87,1.94-1.94Z"/>
+            <path d="M76.16,50.48H23.85s.01-8.42.01-8.42c.02-11.21,7.75-20.76,18.5-23.74,5.69-1.41,9.68-1.6,15.21-.06,10.81,3.01,18.54,12.68,18.56,23.97l.02,8.25ZM68.64,36.05c-.11-4.21-3.53-8.19-7.79-8.19l-21.82.02c-4.26,0-7.55,4.1-7.67,8.17-.13,4.78,3.67,8.68,8.39,8.66l20.91-.05c4.5-.01,8.08-4.08,7.97-8.61Z"/>
+            <path d="M51.78,16.4h-3.6s-.03-3.96-.03-3.96c-2.05-.91-3.05-3.03-2.57-5.22.43-1.97,2.31-3.5,4.41-3.49s3.98,1.49,4.43,3.52c.48,2.19-.56,4.36-2.64,5.24v3.92Z"/>
+            <circle cx="41.23" cy="36.23" r="3.55"/>
+            <circle cx="58.75" cy="36.23" r="3.54"/>
+          </svg>
+          <span id="logo">Tasker</span>
+          <button
+            class="tab-btn active"
+            onclick="switchTab('tasks')"
+            id="tab-tasks"
+          >
+            Tasks
+          </button>
+          <button class="tab-btn" onclick="switchTab('agents')" id="tab-agents">
+            Agents
+          </button>
+          <button class="tab-btn" onclick="switchTab('log')" id="tab-log">
+            Log
+          </button>
+        </div>
+        <div id="topbar-center"></div>
+        <div id="topbar-right">
+          <div id="watcher-status" class="disconnected">
+            <span id="watcher-label">Offline — run: /tasker</span>
+          </div>
+          <button id="btn-pause" class="topbar-btn" type="button" onclick="pauseTasker()" title="Pause scan loop" style="display:none;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="4" x2="7" y2="21"/><line x1="17" y1="4" x2="17" y2="21"/></svg></button>
+          <button id="btn-stop" class="topbar-btn" type="button" onclick="stopTasker()" title="Stop Tasker" style="display:none;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg></button>
+          <button id="btn-chat-toggle" class="topbar-btn" type="button" onclick="toggleChatPanel()" title="Toggle chat">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </button>
+          <button id="btn-settings" class="topbar-btn" type="button" onclick="openSettings()" title="Settings">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Content -->
+      <div id="content-wrapper">
+      <div id="main">
+        <!-- BOARD -->
+        <div id="tasks-panel" class="tab-panel active">
+          <div id="tasks-columns">
+            <!-- columns injected by JS -->
+          </div>
+        </div>
+
+        <!-- AGENTS -->
+        <div id="agents-panel" class="tab-panel">
+          <div id="agents-panel-inner">
+            <div class="panel-header">
+              <div class="panel-title">Agents</div>
+              <button class="btn-primary" onclick="openAgentModal(null)">
+                + Add Agent
+              </button>
+            </div>
+            <div id="agents-grid"></div>
+          </div>
+        </div>
+
+        <!-- LOG -->
+        <div id="log-panel" class="tab-panel">
+          <div id="log-empty" class="hidden">No log entries yet.</div>
+        </div>
+
+      </div>
+
+      <!-- CHAT PANEL (slide-in from right) -->
+      <div id="chat-panel">
+        <div id="chat-panel-inner">
+          <div id="chat-panel-messages"></div>
+          <div id="chat-panel-input-row">
+            <textarea
+              id="chat-panel-textarea"
+              class="chat-input"
+              placeholder="Ask Claude about your board…"
+              rows="1"
+            ></textarea>
+            <button
+              type="button"
+              id="chat-panel-send"
+              class="btn-send"
+              onclick="sendChatMessage()"
+            >Send</button>
+          </div>
+        </div>
+      </div>
+
+      </div><!-- /content-wrapper -->
+    </div>
+
+    <!-- ─── TASK DETAIL MODAL ────────────────────────────────── -->
+    <div
+      id="task-modal"
+      class="modal-overlay hidden"
+      onclick="handleModalOverlayClick(event, 'task-modal')"
+    >
+      <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title" id="task-modal-title">Task</div>
+          <button class="btn-close" onclick="closeModal('task-modal')">
+            ×
+          </button>
+        </div>
+        <div class="modal-body" id="task-modal-body">
+          <!-- injected by JS -->
+        </div>
+        <div class="modal-footer" id="task-modal-footer">
+          <!-- injected by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── AGENT MODAL ──────────────────────────────────────── -->
+    <div
+      id="agent-modal"
+      class="modal-overlay hidden"
+      onclick="handleModalOverlayClick(event, 'agent-modal')"
+    >
+      <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title" id="agent-modal-title">Agent</div>
+          <button class="btn-close" onclick="closeModal('agent-modal')">
+            ×
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Name</label>
+            <input
+              class="form-input"
+              id="ag-name"
+              type="text"
+              placeholder="Agent name"
+            />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Role / System Prompt</label>
+            <textarea
+              class="form-textarea mono"
+              id="ag-role"
+              rows="5"
+              placeholder="You are a..."
+            ></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Color</label>
+            <div class="color-input-row">
+              <input
+                type="color"
+                id="ag-color"
+                value="#5865f2"
+                title="Agent Color"
+              />
+              <div class="color-presets">
+                <div
+                  class="color-preset"
+                  data-color="#3b82f6"
+                  style="background: #3b82f6"
+                  onclick="setAgentColor('#3b82f6')"
+                  title="Blue"
+                ></div>
+                <div
+                  class="color-preset"
+                  data-color="#10b981"
+                  style="background: #10b981"
+                  onclick="setAgentColor('#10b981')"
+                  title="Green"
+                ></div>
+                <div
+                  class="color-preset"
+                  data-color="#f59e0b"
+                  style="background: #f59e0b"
+                  onclick="setAgentColor('#f59e0b')"
+                  title="Amber"
+                ></div>
+                <div
+                  class="color-preset"
+                  data-color="#8b5cf6"
+                  style="background: #8b5cf6"
+                  onclick="setAgentColor('#8b5cf6')"
+                  title="Purple"
+                ></div>
+                <div
+                  class="color-preset"
+                  data-color="#ef4444"
+                  style="background: #ef4444"
+                  onclick="setAgentColor('#ef4444')"
+                  title="Red"
+                ></div>
+                <div
+                  class="color-preset"
+                  data-color="#5865f2"
+                  style="background: #5865f2"
+                  onclick="setAgentColor('#5865f2')"
+                  title="Indigo"
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" onclick="closeModal('agent-modal')">
+            Cancel
+          </button>
+          <button class="btn-primary" onclick="saveAgent()">Save Agent</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SETTINGS MODAL ───────────────────────────────────── -->
+    <div
+      id="settings-modal"
+      class="modal-overlay hidden"
+      onclick="handleModalOverlayClick(event, 'settings-modal')"
+    >
+      <div class="modal modal-wide" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title">Settings</div>
+          <button class="btn-close" onclick="closeModal('settings-modal')">
+            ×
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="settings-section">
+            <div class="settings-section-title">Appearance</div>
+            <div onclick="toggleTheme()" title="Toggle theme" style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;color:var(--text-secondary);">
+              <!-- moon -->
+              <svg id="icon-moon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+              <!-- pill switch -->
+              <div id="theme-switch-track" style="width:36px;height:20px;border-radius:10px;background:var(--toggle-bg);border:1px solid var(--toggle-border);position:relative;transition:background 0.2s,border-color 0.2s;flex-shrink:0;">
+                <div id="theme-switch-knob" style="position:absolute;top:3px;left:3px;width:12px;height:12px;border-radius:50%;background:var(--text-secondary);transition:transform 0.2s,background 0.2s;"></div>
+              </div>
+              <!-- sun -->
+              <svg id="icon-sun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+            </div>
+          </div>
+          <div class="settings-section mb-0">
+            <div class="settings-section-title">Permissions</div>
+            <div class="perm-list">
+              <div class="perm-row">
+                <div>
+                  <div class="perm-label">Read files</div>
+                  <div class="perm-hint">Read</div>
+                </div>
+                <div class="perm-toggle" id="perm-toggle-read" onclick="togglePerm('read')">
+                  <div class="perm-toggle-knob"></div>
+                </div>
+              </div>
+              <div class="perm-row">
+                <div>
+                  <div class="perm-label">Edit / Write files</div>
+                  <div class="perm-hint">Edit, Write</div>
+                </div>
+                <div class="perm-toggle" id="perm-toggle-edit" onclick="togglePerm('edit')">
+                  <div class="perm-toggle-knob"></div>
+                </div>
+              </div>
+              <div class="perm-row">
+                <div>
+                  <div class="perm-label">Bash commands</div>
+                  <div class="perm-hint">Bash(*)</div>
+                </div>
+                <div class="perm-toggle" id="perm-toggle-bash" onclick="togglePerm('bash')">
+                  <div class="perm-toggle-knob"></div>
+                </div>
+              </div>
+              <div class="perm-row">
+                <div>
+                  <div class="perm-label">Web access</div>
+                  <div class="perm-hint">WebFetch(*), WebSearch(*)</div>
+                </div>
+                <div class="perm-toggle" id="perm-toggle-web" onclick="togglePerm('web')">
+                  <div class="perm-toggle-knob"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="justify-content: space-between;">
+          <a href="https://ko-fi.com/emberstonestudio" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#cd5d5d;text-decoration:none;transition:color 0.15s;" onmouseover="this.style.color='#e07070'" onmouseout="this.style.color='#cd5d5d'">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+            Support Tasker
+          </a>
+          <button class="btn-primary" onclick="savePermissions()">Save Permissions</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── ADD TASK MODAL ────────────────────────────────────── -->
+    <div
+      id="addtask-modal"
+      class="modal-overlay hidden"
+      onclick="handleModalOverlayClick(event, 'addtask-modal')"
+    >
+      <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title" id="addtask-modal-title">Add Task</div>
+          <button class="btn-close" onclick="closeModal('addtask-modal')">
+            ×
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Title</label>
+            <input
+              class="form-input"
+              id="at-title"
+              type="text"
+              placeholder="Task title"
+            />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Description</label>
+            <textarea
+              class="form-textarea"
+              id="at-desc"
+              rows="4"
+              placeholder="Full description / prompt for the agent..."
+            ></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Agent</label>
+            <select
+              class="form-select"
+              id="at-agent"
+              title="Agent"
+            ></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Pipeline steps (optional)</label>
+            <div class="form-hint pipeline-hint">Chain agents in sequence. Each agent's output is passed to the next.</div>
+            <div class="pipeline-steps" id="at-pipeline-steps"></div>
+            <button type="button" class="btn-add-step" onclick="addPipelineStep('at-pipeline-steps')">+ Add step</button>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Priority</label>
+            <div class="radio-group" id="at-priority-group">
+              <label class="radio-opt" onclick="selectPriority('low', this)">
+                <input type="radio" name="at-priority" value="low" />
+                <span class="radio-dot" style="background: #444"></span> Low
+              </label>
+              <label
+                class="radio-opt selected"
+                onclick="selectPriority('medium', this)"
+              >
+                <input type="radio" name="at-priority" value="medium" checked />
+                <span class="radio-dot" style="background: #f59e0b"></span>
+                Medium
+              </label>
+              <label class="radio-opt" onclick="selectPriority('high', this)">
+                <input type="radio" name="at-priority" value="high" />
+                <span class="radio-dot" style="background: #ef4444"></span> High
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" onclick="closeModal('addtask-modal')">
+            Cancel
+          </button>
+          <button class="btn-primary" onclick="saveNewTask()">Add Task</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // ─────────────────────────────────────────────────────────────────
+      // STATE MANAGEMENT
+      // ─────────────────────────────────────────────────────────────────
+
+      const WATCHER_URL = `http://localhost:${location.port}`;
+      let state = {};
+      let eventSource = null;
+      let editingAgentId = null;
+      let editingTaskId = null;
+      let addTaskStatus = "backlog";
+      let dragSrcId = null;
+
+      let _persistTimer = null;
+
+      function loadState() {
+        // Fallback: embedded JSON in the file (used when server not running)
+        state = JSON.parse(document.getElementById("app-state").textContent);
+      }
+
+      function applyState(incoming) {
+        state = incoming;
+        renderBoard();
+        if (editingTaskId) {
+          const t = state.tasks.find(t => t.id === editingTaskId);
+          if (t) renderTaskModalBody(t);
+        }
+      }
+
+      function persistState() {
+        clearTimeout(_persistTimer);
+        _persistTimer = setTimeout(() => {
+          fetch(`${WATCHER_URL}/state`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(state),
+          }).catch(() => {});
+        }, 300);
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // WATCHER CONNECTION (SSE)
+      // ─────────────────────────────────────────────────────────────────
+
+      function pauseTasker() {
+        const el = document.getElementById("watcher-status");
+        if (!el.classList.contains("connected")) return;
+        fetch(`${WATCHER_URL}/pause`, { method: "POST" }).catch(() => {});
+        setWatcherStatus("paused", "Paused — run: /tasker-scan");
+      }
+
+      function showUsageCapBanner(message) {
+        const banner = document.getElementById("usage-cap-banner");
+        const msg = document.getElementById("usage-cap-message");
+        if (!banner || !msg) return;
+        msg.textContent = message;
+        banner.classList.remove("hidden");
+      }
+
+      function dismissUsageCapBanner() {
+        const banner = document.getElementById("usage-cap-banner");
+        if (banner) banner.classList.add("hidden");
+      }
+
+      function resumeFromUsageCap() {
+        dismissUsageCapBanner();
+        fetch(`${WATCHER_URL}/resume`, { method: "POST" }).catch(() => {});
+        setWatcherStatus("connected", "Running");
+        startCountdown(60);
+      }
+
+      function connectWatcher() {
+        if (eventSource) {
+          eventSource.close();
+          eventSource = null;
+        }
+        try {
+          eventSource = new EventSource(`${WATCHER_URL}/events`);
+          eventSource.onopen = () => {}; // state set by 'connected' SSE event
+          eventSource.onerror = () => {
+            setWatcherStatus("disconnected", "Offline — run: /tasker");
+            eventSource.close();
+            eventSource = null;
+            setTimeout(connectWatcher, 5000);
+          };
+          eventSource.onmessage = (e) => {
+            let ev;
+            try {
+              ev = JSON.parse(e.data);
+            } catch {
+              return;
+            }
+            handleWatcherEvent(ev);
+          };
+        } catch {
+          setWatcherStatus("disconnected", "Offline — run: /tasker");
+          setTimeout(connectWatcher, 5000);
+        }
+      }
+
+      let countdownTimer = null;
+      let countdownSeconds = 0;
+
+      function startCountdown(seconds) {
+        stopCountdown();
+        countdownSeconds = seconds;
+        updateCountdownDisplay();
+        countdownTimer = setInterval(() => {
+          countdownSeconds--;
+          if (countdownSeconds <= 0) {
+            stopCountdown();
+          } else {
+            updateCountdownDisplay();
+          }
+        }, 1000);
+      }
+
+      function stopCountdown() {
+        if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+        const status = document.getElementById("watcher-status");
+        const lbl = document.getElementById("watcher-label");
+        if (lbl && status && status.classList.contains("connected")) {
+          lbl.textContent = "Scanning...";
+        }
+      }
+
+      function updateCountdownDisplay() {
+        const lbl = document.getElementById("watcher-label");
+        if (!lbl) return;
+        const m = Math.floor(countdownSeconds / 60);
+        const s = countdownSeconds % 60;
+        lbl.textContent = `Next scan in ${m}:${String(s).padStart(2, "0")}`;
+      }
+
+      function setWatcherStatus(cls, label) {
+        const el = document.getElementById("watcher-status");
+        const lbl = document.getElementById("watcher-label");
+        const stop = document.getElementById("btn-stop");
+        const pause = document.getElementById("btn-pause");
+        if (el) el.className = cls;
+        if (lbl) lbl.textContent = label;
+        if (stop) stop.style.display = cls === "disconnected" ? "none" : "inline-flex";
+        if (pause) pause.style.display = cls === "connected" ? "inline-flex" : "none";
+        if (cls !== "connected") stopCountdown();
+      }
+
+      function stopTasker() {
+        if (!confirm("Stop the Tasker server?")) return;
+        setWatcherStatus("disconnected", "Offline — run: /tasker");
+        if (eventSource) { eventSource.close(); eventSource = null; }
+        fetch(`${WATCHER_URL}/shutdown`, { method: "POST" }).catch(() => {});
+      }
+
+      function handleWatcherEvent(ev) {
+        if (ev.type === "connected") {
+          if (ev.projectName) {
+            document.title = `Tasker — ${ev.projectName}`;
+            const center = document.getElementById("topbar-center");
+            if (center) center.textContent = ev.projectName;
+          }
+          if (ev.state) {
+            applyState(ev.state);
+          } else {
+            persistState(); // bootstrap tasks.json on first run
+          }
+          if (ev.paused) {
+            setWatcherStatus("paused", "Paused — run: /tasker-scan");
+          } else {
+            setWatcherStatus("connected", "Running");
+            const elapsed = ev.lastHeartbeat ? Math.floor((Date.now() - ev.lastHeartbeat) / 1000) : 0;
+            startCountdown(Math.max(1, 60 - elapsed));
+          }
+          return;
+        }
+        if (ev.type === "state_sync") {
+          applyState(ev.state);
+          return;
+        }
+        if (ev.type === "tasker_state") {
+          if (ev.paused) {
+            setWatcherStatus("paused", "Paused — run: /tasker-scan");
+          } else {
+            setWatcherStatus("connected", "Running");
+            startCountdown(60);
+          }
+          return;
+        }
+        if (ev.type === "scan_heartbeat") {
+          // countdown is driven by next_scan events; heartbeat only signals liveness
+          return;
+        }
+        if (ev.type === "next_scan") {
+          if (typeof ev.seconds === "number" && ev.seconds > 0) startCountdown(ev.seconds);
+          return;
+        }
+        if (ev.type === "shutdown") {
+          setWatcherStatus("disconnected", "Offline — run: /tasker");
+          return;
+        }
+        if (ev.type === "usage_cap") {
+          showUsageCapBanner(ev.message || "Usage limit reached.");
+          return;
+        }
+        if (ev.type === "task_update") {
+          const task = state.tasks.find((t) => t.id === ev.task_id);
+          if (task) {
+            if (ev.status) task.status = ev.status;
+            task.updated_at = ev.timestamp || new Date().toISOString();
+            if (ev.activity) {
+              task.activity = task.activity || [];
+              task.activity.push(ev.activity);
+            }
+            persistState();
+            renderBoard();
+            if (editingTaskId === ev.task_id) {
+              if (ev.status) {
+                // Status changed — re-render full modal so footer updates
+                openTaskModal(ev.task_id);
+              } else {
+                // Chat-only update — just refresh the chat section
+                renderChatSection(task);
+              }
+            }
+          }
+        } else if (ev.type === "task_progress") {
+          const task = state.tasks.find((t) => t.id === ev.task_id);
+          if (task) {
+            task.progress = ev.progress;
+            persistState();
+            const bar = document.querySelector(`#card-${task.id} .card-progress-bar`);
+            if (bar) {
+              const activity = task.activity || [];
+              const lastInProgressIdx = activity.reduce((last, a, i) =>
+                (a.type === "moved" && /^in progress/i.test(a.content)) ? i : last, -1);
+              const outputCount = activity.slice(lastInProgressIdx + 1).filter(a => a.type === "output").length;
+              const expectedSteps = (task.pipeline && task.pipeline.length > 0) ? task.pipeline.length + 1 : 1;
+              const pct = outputCount > 0
+                ? Math.round(Math.min(outputCount / expectedSteps, 1) * 100)
+                : ev.progress;
+              bar.classList.remove("indeterminate");
+              bar.style.width = pct + "%";
+            }
+          }
+        } else if (ev.type === "new_task") {
+          state.tasks.push(ev.task);
+          addLog(ev.task.id, `Handoff task created: "${ev.task.title}"`);
+          persistState();
+          renderBoard();
+        } else if (ev.type === "log") {
+          addLog(ev.task_id || null, ev.message);
+          persistState();
+          if (document.getElementById("tab-log").classList.contains("active"))
+            renderLog();
+        }
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // UUID
+      // ─────────────────────────────────────────────────────────────────
+
+      function uid() {
+        return crypto.randomUUID();
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // DATE FORMATTING
+      // ─────────────────────────────────────────────────────────────────
+
+      function fmtDate(iso) {
+        if (!iso) return "";
+        const d = new Date(iso);
+        return d.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        });
+      }
+
+      function fmtTs(iso) {
+        if (!iso) return "";
+        const d = new Date(iso);
+        return d.toISOString().replace("T", " ").slice(0, 19);
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // CHAT PANEL
+      // ─────────────────────────────────────────────────────────────────
+
+      let _chatSessionId = null;
+
+      function _chatAppendMessage(role, text) {
+        const list = document.getElementById("chat-panel-messages");
+        if (!list) return;
+
+        const empty = document.getElementById("chat-panel-empty");
+        if (empty) empty.remove();
+
+        const wrap = document.createElement("div");
+        wrap.className = `chat-panel-msg ${role}`;
+
+        const bubble = document.createElement("div");
+        bubble.className = "chat-panel-bubble";
+        bubble.textContent = text;
+
+        const meta = document.createElement("span");
+        meta.className = "chat-panel-meta";
+        const now = new Date();
+        meta.textContent = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+
+        wrap.appendChild(bubble);
+        wrap.appendChild(meta);
+        list.appendChild(wrap);
+        list.scrollTop = list.scrollHeight;
+        return wrap;
+      }
+
+      function _chatAppendThinking() {
+        const list = document.getElementById("chat-panel-messages");
+        if (!list) return null;
+        const el = document.createElement("div");
+        el.className = "chat-panel-thinking";
+        el.textContent = "thinking…";
+        list.appendChild(el);
+        list.scrollTop = list.scrollHeight;
+        return el;
+      }
+
+      async function sendChatMessage() {
+        const textarea = document.getElementById("chat-panel-textarea");
+        const sendBtn = document.getElementById("chat-panel-send");
+        if (!textarea || !sendBtn) return;
+
+        const message = textarea.value.trim();
+        if (!message) return;
+
+        textarea.value = "";
+        textarea.style.height = "";
+        sendBtn.disabled = true;
+
+        _chatAppendMessage("user", message);
+        const thinking = _chatAppendThinking();
+
+        try {
+          const res = await fetch(`${WATCHER_URL}/chat`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message, session_id: _chatSessionId }),
+          });
+          const data = await res.json();
+
+          if (thinking) thinking.remove();
+
+          if (data.error) {
+            _chatAppendMessage("error", data.error);
+          } else {
+            _chatSessionId = data.session_id || _chatSessionId;
+            _chatAppendMessage("assistant", data.reply || "(no reply)");
+          }
+        } catch (err) {
+          if (thinking) thinking.remove();
+          _chatAppendMessage("error", `Network error: ${err.message}`);
+        } finally {
+          sendBtn.disabled = false;
+          textarea.focus();
+        }
+      }
+
+      function _initChatPanel() {
+        const list = document.getElementById("chat-panel-messages");
+        if (list && list.children.length === 0) {
+          const empty = document.createElement("div");
+          empty.id = "chat-panel-empty";
+          empty.textContent = "No messages yet. Ask Claude anything about your board.";
+          list.appendChild(empty);
+        }
+
+        const textarea = document.getElementById("chat-panel-textarea");
+        if (textarea && !textarea._chatBound) {
+          textarea._chatBound = true;
+          textarea.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              sendChatMessage();
+            }
+          });
+          textarea.addEventListener("input", () => {
+            textarea.style.height = "";
+            textarea.style.height = Math.min(textarea.scrollHeight, 140) + "px";
+          });
+        }
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // TAB NAVIGATION
+      // ─────────────────────────────────────────────────────────────────
+
+      function switchTab(tab) {
+        document
+          .querySelectorAll(".tab-btn")
+          .forEach((b) => b.classList.remove("active"));
+        document
+          .querySelectorAll(".tab-panel")
+          .forEach((p) => p.classList.remove("active"));
+        document.getElementById("tab-" + tab).classList.add("active");
+        document.getElementById(tab + "-panel").classList.add("active");
+        if (tab === "agents") renderAgents();
+        if (tab === "log") renderLog();
+        if (tab === "tasks") renderBoard();
+      }
+
+      function toggleChatPanel() {
+        const panel = document.getElementById("chat-panel");
+        const btn = document.getElementById("btn-chat-toggle");
+        const isOpen = panel.classList.toggle("open");
+        btn.classList.toggle("active", isOpen);
+        if (isOpen) _initChatPanel();
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // BOARD RENDERING
+      // ─────────────────────────────────────────────────────────────────
+
+      const COLUMNS = [
+        { id: "backlog", label: "Backlog" },
+        { id: "ready", label: "Ready" },
+        { id: "in_progress", label: "In Progress" },
+        { id: "in_review", label: "In Review" },
+        { id: "done", label: "Done" },
+      ];
+
+      function renderBoard() {
+        const container = document.getElementById("tasks-columns");
+        container.innerHTML = "";
+        COLUMNS.forEach((col) => {
+          const tasks = state.tasks.filter((t) => t.status === col.id);
+          const div = document.createElement("div");
+          div.className = "column";
+          div.innerHTML = `
+      <div class="column-header">
+        <div class="column-title">
+          ${col.label}
+          <span class="col-count">${tasks.length}</span>
+        </div>
+        <button class="btn-add-task" onclick="openAddTask('${col.id}')" title="Add task">+</button>
+      </div>
+      <div class="column-cards" id="col-${col.id}"
+        ondragover="onDragOver(event, '${col.id}')"
+        ondragleave="onDragLeave(event, '${col.id}')"
+        ondrop="onDrop(event, '${col.id}')">
+        ${tasks.map((t) => renderCard(t)).join("")}
+      </div>
+    `;
+          container.appendChild(div);
+        });
+      }
+
+      function renderCard(task) {
+        const effectiveAgentId = (task.pipeline && task.pipeline.length > 0)
+          ? task.pipeline[task.pipeline_step || 0]
+          : task.agent_id;
+        const agent = state.agents.find((a) => a.id === effectiveAgentId);
+        const color = agent ? agent.color : (task.agent_id === null && !task.pipeline?.length ? "var(--accent)" : "#333");
+        const priorityClass = task.priority || "medium";
+        const agentName = agent ? agent.name : (task.agent_id === null ? "Auto" : "—");
+        const pipelineBadge = (task.pipeline && task.pipeline.length > 0)
+          ? `<div class="card-pipeline-badge">Step ${(task.pipeline_step || 0) + 1}/${task.pipeline.length}</div>`
+          : "";
+        return `
+    <div class="task-card" id="card-${task.id}"
+      style="border-left-color: ${color}"
+      draggable="true"
+      ondragstart="onDragStart(event, '${task.id}')"
+      ondragend="onDragEnd(event, '${task.id}')"
+      onclick="openTaskModal('${task.id}')">
+      <div class="card-top">
+        <div class="card-title">${escHtml(task.title)}</div>
+        <div class="priority-dot ${priorityClass}" title="${priorityClass} priority"></div>
+      </div>
+      ${task.description ? `<div class="card-desc">${escHtml(task.description)}</div>` : ""}
+      ${pipelineBadge}
+      <div class="card-meta">
+        <div class="card-agent-info">
+          <span class="agent-dot" style="background:${color}"></span>
+          <span class="card-agent-name">${escHtml(agentName)}</span>
+        </div>
+        <span class="card-date">${fmtDate(task.created_at)}</span>
+      </div>
+      ${task.status === "in_progress" ? (() => {
+        const activity = task.activity || [];
+        const lastInProgressIdx = activity.reduce((last, a, i) =>
+          (a.type === "moved" && /^in progress/i.test(a.content)) ? i : last, -1);
+        const outputCount = activity.slice(lastInProgressIdx + 1).filter(a => a.type === "output").length;
+        const expectedSteps = (task.pipeline && task.pipeline.length > 0) ? task.pipeline.length + 1 : 1;
+        const pct = outputCount > 0
+          ? Math.round(Math.min(outputCount / expectedSteps, 1) * 100)
+          : (task.progress !== undefined ? task.progress : 0);
+        const isIndeterminate = outputCount === 0 && task.progress === undefined;
+        return `<div class="card-progress"><div class="card-progress-bar${isIndeterminate ? " indeterminate" : `" style="width:${pct}%`}"></div></div>`;
+      })() : ""}
+    </div>
+  `;
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // DRAG AND DROP
+      // ─────────────────────────────────────────────────────────────────
+
+      function onDragStart(e, id) {
+        dragSrcId = id;
+        e.dataTransfer.effectAllowed = "move";
+        setTimeout(() => {
+          const el = document.getElementById("card-" + id);
+          if (el) el.classList.add("dragging");
+        }, 0);
+      }
+
+      function onDragEnd(e, id) {
+        const el = document.getElementById("card-" + id);
+        if (el) el.classList.remove("dragging");
+        document
+          .querySelectorAll(".column-cards")
+          .forEach((c) => c.classList.remove("drag-over"));
+      }
+
+      function onDragOver(e, colId) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        const col = document.getElementById("col-" + colId);
+        if (col) col.classList.add("drag-over");
+      }
+
+      function onDragLeave(e, colId) {
+        const col = document.getElementById("col-" + colId);
+        if (col) col.classList.remove("drag-over");
+      }
+
+      function onDrop(e, colId) {
+        e.preventDefault();
+        document
+          .querySelectorAll(".column-cards")
+          .forEach((c) => c.classList.remove("drag-over"));
+        if (!dragSrcId) return;
+        const task = state.tasks.find((t) => t.id === dragSrcId);
+        if (!task || task.status === colId) return;
+        const oldStatus = task.status;
+        task.status = colId;
+        task.updated_at = new Date().toISOString();
+        task.activity = task.activity || [];
+        task.activity.push({
+          timestamp: new Date().toISOString(),
+          type: "moved",
+          content: `Moved from ${oldStatus} to ${colId}`,
+        });
+        addLog(
+          task.id,
+          `Task "${task.title}" moved from ${oldStatus} to ${colId}`,
+        );
+        persistState();
+
+        renderBoard();
+        dragSrcId = null;
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // TASK MODAL
+      // ─────────────────────────────────────────────────────────────────
+
+      function openTaskModal(taskId) {
+        editingTaskId = taskId;
+        const task = state.tasks.find((t) => t.id === taskId);
+        if (!task) return;
+        document.getElementById("task-modal-title").textContent = "Task Detail";
+        renderTaskModalBody(task);
+        openModal("task-modal");
+      }
+
+      function renderTaskModalBody(task) {
+        const body = document.getElementById("task-modal-body");
+        const footer = document.getElementById("task-modal-footer");
+        const agentOptions = buildAgentOptions(task.agent_id);
+        const existingPipeline = task.pipeline || [];
+        const pipelineStepsHTML = existingPipeline.map((agId) => buildPipelineStepRow(agId)).join("");
+        body.innerHTML = `
+    <div class="form-group">
+      <label class="form-label">Title</label>
+      <input class="form-input" id="td-title" type="text" value="${escAttr(task.title)}">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description</label>
+      <textarea class="form-textarea" id="td-desc" rows="5">${escHtml(task.description || "")}</textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Agent</label>
+      <select class="form-select" id="td-agent">${agentOptions}</select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Pipeline steps (optional)</label>
+      <div class="pipeline-hint form-hint">Chain agents in sequence. Each agent's output is passed to the next.</div>
+      <div class="pipeline-steps" id="td-pipeline-steps">${pipelineStepsHTML}</div>
+      <button type="button" class="btn-add-step" onclick="addPipelineStep('td-pipeline-steps')">+ Add step</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Priority</label>
+      <div class="radio-group" id="td-priority-group">
+        <label class="radio-opt ${task.priority === "low" ? "selected" : ""}" onclick="selectPriorityTd('low', this)">
+          <input type="radio" name="td-priority" value="low" ${task.priority === "low" ? "checked" : ""}>
+          <span class="radio-dot" style="background:#444"></span> Low
+        </label>
+        <label class="radio-opt ${!task.priority || task.priority === "medium" ? "selected" : ""}" onclick="selectPriorityTd('medium', this)">
+          <input type="radio" name="td-priority" value="medium" ${!task.priority || task.priority === "medium" ? "checked" : ""}>
+          <span class="radio-dot" style="background:#f59e0b"></span> Medium
+        </label>
+        <label class="radio-opt ${task.priority === "high" ? "selected" : ""}" onclick="selectPriorityTd('high', this)">
+          <input type="radio" name="td-priority" value="high" ${task.priority === "high" ? "checked" : ""}>
+          <span class="radio-dot" style="background:#ef4444"></span> High
+        </label>
+      </div>
+    </div>
+
+    <div id="task-chat-wrapper"></div>
+  `;
+
+        renderChatSection(task);
+
+        // Footer
+        footer.innerHTML = "";
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "btn-danger";
+        deleteBtn.textContent = "Delete";
+        deleteBtn.onclick = () => deleteTask(task.id);
+        footer.appendChild(deleteBtn);
+
+        const spacer = document.createElement("div");
+        spacer.style.flex = "1";
+        footer.appendChild(spacer);
+
+        if (task.status === "in_review") {
+          const doneBtn = document.createElement("button");
+          doneBtn.className = "btn-move-done";
+          doneBtn.textContent = "Move to Done";
+          doneBtn.onclick = () => moveToDone(task.id);
+          footer.appendChild(doneBtn);
+        }
+
+        const saveBtn = document.createElement("button");
+        saveBtn.className = "btn-primary";
+        saveBtn.textContent = "Save Changes";
+        saveBtn.onclick = () => saveTaskChanges(task.id);
+        footer.appendChild(saveBtn);
+      }
+
+      function saveTaskChanges(taskId) {
+        const task = state.tasks.find((t) => t.id === taskId);
+        if (!task) return;
+        task.title =
+          document.getElementById("td-title").value.trim() || task.title;
+        task.description = document.getElementById("td-desc").value.trim();
+        task.agent_id = document.getElementById("td-agent").value || null;
+        task.pipeline = collectPipelineSteps("td-pipeline-steps");
+        if (task.pipeline.length === 0) {
+          delete task.pipeline;
+          delete task.pipeline_step;
+        } else {
+          task.pipeline_step = task.pipeline_step || 0;
+        }
+        const pri = document.querySelector('input[name="td-priority"]:checked');
+        task.priority = pri ? pri.value : "medium";
+        task.updated_at = new Date().toISOString();
+        task.activity = task.activity || [];
+        task.activity.push({
+          timestamp: new Date().toISOString(),
+          type: "updated",
+          content: "Task updated",
+        });
+        persistState();
+
+        closeModal("task-modal");
+        renderBoard();
+      }
+
+      function deleteTask(taskId) {
+        if (!confirm("Delete this task?")) return;
+        state.tasks = state.tasks.filter((t) => t.id !== taskId);
+        addLog(taskId, "Task deleted");
+        persistState();
+
+        closeModal("task-modal");
+        renderBoard();
+      }
+
+
+      function selectPriorityTd(val, el) {
+        document
+          .querySelectorAll("#td-priority-group .radio-opt")
+          .forEach((o) => o.classList.remove("selected"));
+        el.classList.add("selected");
+        const inp = el.querySelector('input[type="radio"]');
+        if (inp) inp.checked = true;
+      }
+
+      function moveToDone(taskId) {
+        const task = state.tasks.find((t) => t.id === taskId);
+        if (!task) return;
+        task.status = "done";
+        task.updated_at = new Date().toISOString();
+        task.activity = task.activity || [];
+        task.activity.push({ timestamp: new Date().toISOString(), type: "moved", content: "Moved to Done" });
+        addLog(taskId, `Task "${task.title}" moved to Done`);
+        persistState();
+        closeModal("task-modal");
+        renderBoard();
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // CHAT THREAD
+      // ─────────────────────────────────────────────────────────────────
+
+      function buildChatSectionHTML(task) {
+        const activity = (task.activity || []).slice();
+        const msgs = activity.map((a) => {
+          if (a.type === "chat_user") {
+            return `<div class="chat-msg user">
+              <div class="chat-bubble">${escHtml(a.content)}</div>
+              <span class="chat-meta">${fmtTs(a.timestamp)}</span>
+            </div>`;
+          } else if (a.type === "output" || a.type === "chat_agent") {
+            return `<div class="chat-msg agent">
+              <div class="chat-bubble">${escHtml(a.content)}</div>
+              <span class="chat-meta">${fmtTs(a.timestamp)}</span>
+            </div>`;
+          } else {
+            return `<div class="chat-msg system">
+              <div class="chat-bubble">${escHtml(a.type)}: ${escHtml(a.content)}</div>
+            </div>`;
+          }
+        }).join("");
+
+        return `
+          <div class="activity-section">
+            <div class="activity-title">Activity &amp; Comments</div>
+            <div class="chat-messages" id="chat-messages-${task.id}">
+              ${msgs || '<div style="color:var(--text-tertiary);font-size:11px;font-family:var(--font-mono);padding:6px 0">No activity yet.</div>'}
+            </div>
+            <div class="chat-input-row">
+              <textarea class="chat-input" id="chat-input-${task.id}" placeholder="Add a comment for the agent…" rows="1"
+                onkeydown="handleChatKeydown(event,'${task.id}')"></textarea>
+              <button class="btn-send" id="chat-send-${task.id}" onclick="sendTaskChatMessage('${task.id}')">Send</button>
+            </div>
+          </div>
+        `;
+      }
+
+      function renderChatSection(task) {
+        const wrapper = document.getElementById("task-chat-wrapper");
+        if (!wrapper) return;
+        wrapper.innerHTML = buildChatSectionHTML(task);
+        const msgs = document.getElementById("chat-messages-" + task.id);
+        if (msgs) msgs.scrollTop = msgs.scrollHeight;
+      }
+
+      function handleChatKeydown(e, taskId) {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          sendTaskChatMessage(taskId);
+        }
+      }
+
+      function sendTaskChatMessage(taskId) {
+        const msgEl = document.getElementById("chat-input-" + taskId);
+        if (!msgEl) return;
+        const msg = msgEl.value.trim();
+        if (!msg) return;
+
+        const task = state.tasks.find((t) => t.id === taskId);
+        if (!task) return;
+
+        msgEl.value = "";
+        const now = new Date().toISOString();
+        task.activity = task.activity || [];
+        task.activity.push({ timestamp: now, type: "chat_user", content: msg });
+        task.updated_at = now;
+        persistState();
+        renderChatSection(task);
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // ADD TASK MODAL
+      // ─────────────────────────────────────────────────────────────────
+
+      function openAddTask(status) {
+        addTaskStatus = status || "backlog";
+        document.getElementById("addtask-modal-title").textContent =
+          "Add Task — " + colLabel(status);
+        document.getElementById("at-title").value = "";
+        document.getElementById("at-desc").value = "";
+        document
+          .getElementById("at-priority-group")
+          .querySelectorAll(".radio-opt")
+          .forEach((o) => {
+            o.classList.remove("selected");
+            const inp = o.querySelector('input[type="radio"]');
+            if (inp && inp.value === "medium") {
+              o.classList.add("selected");
+              inp.checked = true;
+            }
+          });
+        populateAgentSelect("at-agent", null);
+        document.getElementById("at-pipeline-steps").innerHTML = "";
+        openModal("addtask-modal");
+      }
+
+      function colLabel(id) {
+        const c = COLUMNS.find((x) => x.id === id);
+        return c ? c.label : id;
+      }
+
+      function saveNewTask() {
+        const title = document.getElementById("at-title").value.trim();
+        if (!title) {
+          alert("Please enter a task title.");
+          return;
+        }
+        const pri = document.querySelector('input[name="at-priority"]:checked');
+        const now = new Date().toISOString();
+        const pipeline = collectPipelineSteps("at-pipeline-steps");
+        const task = {
+          id: uid(),
+          title,
+          description: document.getElementById("at-desc").value.trim(),
+          agent_id: document.getElementById("at-agent").value || null,
+          priority: pri ? pri.value : "medium",
+          status: addTaskStatus,
+          created_at: now,
+          updated_at: now,
+          activity: [
+            { timestamp: now, type: "created", content: "Task created" },
+          ],
+        };
+        if (pipeline.length > 0) {
+          task.pipeline = pipeline;
+          task.pipeline_step = 0;
+        }
+        state.tasks.push(task);
+        addLog(task.id, `Task "${task.title}" created in ${addTaskStatus}`);
+        persistState();
+
+        closeModal("addtask-modal");
+        renderBoard();
+      }
+
+      function selectPriority(val, el) {
+        document
+          .querySelectorAll("#at-priority-group .radio-opt")
+          .forEach((o) => o.classList.remove("selected"));
+        el.classList.add("selected");
+        const inp = el.querySelector('input[type="radio"]');
+        if (inp) inp.checked = true;
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // AGENTS
+      // ─────────────────────────────────────────────────────────────────
+
+      function renderAgents() {
+        const grid = document.getElementById("agents-grid");
+        if (state.agents.length === 0) {
+          grid.innerHTML =
+            '<p style="color:var(--text-secondary)">No agents yet. Add one above.</p>';
+          return;
+        }
+        grid.innerHTML = state.agents
+          .map((a) => {
+            return `
+      <div class="agent-card" style="border-left-color:${a.color}">
+        <div class="agent-card-top">
+          <div class="agent-color-swatch" style="background:${a.color}"></div>
+          <div class="agent-name">${escHtml(a.name)}</div>
+        </div>
+        <div class="agent-role-preview">${escHtml(a.role)}</div>
+        <div class="agent-card-actions">
+          <button class="btn-secondary" onclick="openAgentModal('${a.id}')" style="font-size:12px;padding:4px 10px;">Edit</button>
+          <button class="btn-danger" onclick="deleteAgent('${a.id}')">Delete</button>
+        </div>
+      </div>
+    `;
+          })
+          .join("");
+      }
+
+      function openAgentModal(agentId) {
+        editingAgentId = agentId;
+        const ag = agentId ? state.agents.find((a) => a.id === agentId) : null;
+        document.getElementById("agent-modal-title").textContent = ag
+          ? "Edit Agent"
+          : "Add Agent";
+        document.getElementById("ag-name").value = ag ? ag.name : "";
+        document.getElementById("ag-role").value = ag ? ag.role : "";
+        const col = ag ? ag.color : "#5865f2";
+        document.getElementById("ag-color").value = col;
+        updateColorPresets(col);
+        openModal("agent-modal");
+      }
+
+      function setAgentColor(hex) {
+        document.getElementById("ag-color").value = hex;
+        updateColorPresets(hex);
+      }
+
+      function updateColorPresets(selected) {
+        document.querySelectorAll(".color-preset").forEach((el) => {
+          el.classList.toggle("selected", el.dataset.color === selected);
+        });
+      }
+
+      function saveAgent() {
+        const name = document.getElementById("ag-name").value.trim();
+        if (!name) {
+          alert("Please enter an agent name.");
+          return;
+        }
+        const data = {
+          name,
+          role: document.getElementById("ag-role").value.trim(),
+          color: document.getElementById("ag-color").value,
+        };
+        if (editingAgentId) {
+          const idx = state.agents.findIndex((a) => a.id === editingAgentId);
+          if (idx !== -1) Object.assign(state.agents[idx], data);
+        } else {
+          state.agents.push({ id: uid(), ...data });
+        }
+        persistState();
+
+        closeModal("agent-modal");
+        renderAgents();
+        renderBoard();
+      }
+
+      function deleteAgent(agentId) {
+        if (
+          !confirm(
+            "Delete this agent? Tasks assigned to it will lose their agent assignment.",
+          )
+        )
+          return;
+        state.agents = state.agents.filter((a) => a.id !== agentId);
+        state.tasks.forEach((t) => {
+          if (t.agent_id === agentId) t.agent_id = null;
+        });
+        persistState();
+
+        renderAgents();
+        renderBoard();
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // LOG
+      // ─────────────────────────────────────────────────────────────────
+
+      function renderLog() {
+        const panel = document.getElementById("log-panel");
+        const emptyEl = document.getElementById("log-empty");
+        // Remove existing entries but keep empty
+        Array.from(panel.children).forEach((c) => {
+          if (c.id !== "log-empty") c.remove();
+        });
+        const logs = (state.logs || []).slice().reverse();
+        if (logs.length === 0) {
+          emptyEl.classList.remove("hidden");
+          return;
+        }
+        emptyEl.classList.add("hidden");
+        logs.forEach((entry) => {
+          const div = document.createElement("div");
+          div.className = "log-entry";
+          const task = entry.task_id
+            ? state.tasks.find((t) => t.id === entry.task_id)
+            : null;
+          div.innerHTML = `
+      <span class="log-ts">${fmtTs(entry.timestamp)}</span>
+      <span class="log-msg ${task ? "task-ref" : ""}">${escHtml(entry.message)}</span>
+    `;
+          panel.appendChild(div);
+        });
+      }
+
+      function addLog(taskId, message) {
+        state.logs = state.logs || [];
+        state.logs.push({
+          timestamp: new Date().toISOString(),
+          task_id: taskId || null,
+          message,
+        });
+        // Keep last 1000 entries
+        if (state.logs.length > 1000) state.logs = state.logs.slice(-1000);
+      }
+
+      // Auto-refresh log tab every 5 seconds
+      setInterval(() => {
+        if (document.getElementById("tab-log").classList.contains("active")) {
+          renderLog();
+        }
+      }, 5000);
+
+      // ─────────────────────────────────────────────────────────────────
+      // SETTINGS
+      // ─────────────────────────────────────────────────────────────────
+
+      // ─── Permissions ────────────────────────────────────────────────
+
+      const PERM_MAP = {
+        read: ["Read"],
+        edit: ["Edit", "Write"],
+        bash: ["Bash(*)"],
+        web:  ["WebFetch(*)", "WebSearch(*)"],
+      };
+
+      let _permState = { read: false, edit: false, bash: false, web: false };
+
+      function togglePerm(key) {
+        _permState[key] = !_permState[key];
+        renderPermToggles();
+      }
+
+      function renderPermToggles() {
+        for (const key of Object.keys(PERM_MAP)) {
+          const el = document.getElementById("perm-toggle-" + key);
+          if (!el) continue;
+          if (_permState[key]) {
+            el.classList.add("on");
+          } else {
+            el.classList.remove("on");
+          }
+        }
+      }
+
+      function applyPermState(allowArr) {
+        for (const key of Object.keys(PERM_MAP)) {
+          _permState[key] = PERM_MAP[key].every((e) => allowArr.includes(e));
+        }
+        renderPermToggles();
+      }
+
+      function buildAllowArray() {
+        const allow = [];
+        for (const key of Object.keys(PERM_MAP)) {
+          if (_permState[key]) {
+            for (const entry of PERM_MAP[key]) {
+              if (!allow.includes(entry)) allow.push(entry);
+            }
+          }
+        }
+        return allow;
+      }
+
+      async function loadPermissions() {
+        try {
+          const res = await fetch(`${WATCHER_URL}/permissions`);
+          if (!res.ok) return;
+          const data = await res.json();
+          applyPermState(data.allow || []);
+        } catch {}
+      }
+
+      async function savePermissions() {
+        const allow = buildAllowArray();
+        try {
+          await fetch(`${WATCHER_URL}/permissions`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ allow }),
+          });
+        } catch {}
+        closeModal("settings-modal");
+      }
+
+      function openSettings() {
+        updateThemeButton();
+        loadPermissions();
+        openModal("settings-modal");
+      }
+
+      function toggleTheme() {
+        const isLight = document.documentElement.getAttribute("data-theme") === "light";
+        const next = isLight ? "dark" : "light";
+        applyTheme(next);
+        localStorage.setItem("tasker-theme", next);
+      }
+
+      function applyTheme(theme) {
+        if (theme === "light") {
+          document.documentElement.setAttribute("data-theme", "light");
+        } else {
+          document.documentElement.removeAttribute("data-theme");
+        }
+        updateThemeButton();
+      }
+
+      function updateThemeButton() {
+        const knob = document.getElementById("theme-switch-knob");
+        const moon = document.getElementById("icon-moon");
+        const sun  = document.getElementById("icon-sun");
+        if (!knob) return;
+        const isLight = document.documentElement.getAttribute("data-theme") === "light";
+        knob.style.transform = isLight ? "translateX(16px)" : "translateX(0)";
+        knob.style.background = isLight ? "var(--accent)" : "var(--text-secondary)";
+        moon.style.color = isLight ? "var(--text-tertiary)" : "var(--text-primary)";
+        sun.style.color  = isLight ? "var(--text-primary)"  : "var(--text-tertiary)";
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // SETUP / SPLASH
+      // ─────────────────────────────────────────────────────────────────
+
+      // ─────────────────────────────────────────────────────────────────
+      // MODAL HELPERS
+      // ─────────────────────────────────────────────────────────────────
+
+      function openModal(id) {
+        document.getElementById(id).classList.remove("hidden");
+      }
+
+      function closeModal(id) {
+        document.getElementById(id).classList.add("hidden");
+      }
+
+      function handleModalOverlayClick(e, id) {
+        if (e.target === document.getElementById(id)) closeModal(id);
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // SELECT HELPERS
+      // ─────────────────────────────────────────────────────────────────
+
+      function buildAgentOptions(selectedId) {
+        return [
+          `<option value="" ${selectedId === null || selectedId === undefined ? "selected" : ""}>Auto (Team Lead decides)</option>`,
+          ...state.agents.map(
+            (a) =>
+              `<option value="${a.id}" ${a.id === selectedId ? "selected" : ""}>${escHtml(a.name)}</option>`,
+          ),
+        ].join("");
+      }
+
+      function populateAgentSelect(selectId, selectedId) {
+        const sel = document.getElementById(selectId);
+        sel.innerHTML = buildAgentOptions(selectedId);
+      }
+
+      function buildPipelineStepRow(selectedAgentId) {
+        const opts = state.agents
+          .map(
+            (a) =>
+              `<option value="${a.id}" ${a.id === selectedAgentId ? "selected" : ""}>${escHtml(a.name)}</option>`,
+          )
+          .join("");
+        return `<div class="pipeline-step-row"><select class="form-select">${opts}</select><button type="button" class="btn-remove-step" onclick="this.parentElement.remove()">×</button></div>`;
+      }
+
+      function addPipelineStep(containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        const firstAgentId = state.agents.length > 0 ? state.agents[0].id : "";
+        const div = document.createElement("div");
+        div.innerHTML = buildPipelineStepRow(firstAgentId);
+        container.appendChild(div.firstElementChild);
+      }
+
+      function collectPipelineSteps(containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return [];
+        return Array.from(container.querySelectorAll(".pipeline-step-row select"))
+          .map((s) => s.value)
+          .filter(Boolean);
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // ESCAPE HELPERS
+      // ─────────────────────────────────────────────────────────────────
+
+      function escHtml(str) {
+        if (!str) return "";
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#x27;");
+      }
+
+      function escAttr(str) {
+        return escHtml(str);
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // KEYBOARD SHORTCUTS
+      // ─────────────────────────────────────────────────────────────────
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          [
+            "task-modal",
+            "agent-modal",
+            "settings-modal",
+            "addtask-modal",
+          ].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el && !el.classList.contains("hidden")) closeModal(id);
+          });
+        }
+      });
+
+      // ─────────────────────────────────────────────────────────────────
+      // INIT
+      // ─────────────────────────────────────────────────────────────────
+
+      (function init() {
+        applyTheme(localStorage.getItem("tasker-theme") || "dark");
+        loadState();
+        renderBoard();
+        connectWatcher();
+      })();
+    </script>
+  </body>
+</html>
