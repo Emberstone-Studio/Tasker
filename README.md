@@ -18,7 +18,7 @@ A local-first kanban board for Claude Code agents. Create tasks on the board, ru
    This installs five Claude Code skills into `~/.claude/commands/` and prints the next steps. It does **not** start a server.
 
 3. Reload your VS Code window so the new skills are available:
-   - Open the command palette (`Cmd+Shift+P` on macOS, or your configured shortcut on Windows/Linux)
+   - Open the command palette (`Ctrl+Shift+P` on Windows/Linux, `Cmd+Shift+P` on macOS)
    - Run **Reload Window**
 
 4. Run `/tasker` in Claude Code. This starts the server, opens the board in your browser, and begins the scan loop.
@@ -73,7 +73,7 @@ A pipeline is a sequence of agents applied to a single task in order. Add pipeli
 2. That output is handed to the second agent as its input, and so on
 3. The task moves to **In Review** after the final step completes
 
-The card shows a **Step N/M** badge while a pipeline task is in progress.
+The card shows a **Step N/M** badge while a pipeline task is in progress, and the progress bar tracks completed steps against the total.
 
 ## Claude Code skills
 
@@ -96,7 +96,7 @@ Tasker itself has no built-in model calls. All task execution happens inside Cla
 1. `/tasker-scan` starts the server (if not running), resumes the loop, then scans the queue
 2. It reads `tasks.json`, finds all tasks with `"status": "ready"`, marks them **In Progress**, and spawns a dedicated sub-agent per task via the Agent tool
 3. When agents finish, tasks move to **In Review** with output posted to the activity log
-4. `/tasker-scan` schedules `/tasker-watch` using `ScheduleWakeup` with a 30-second delay (clamped to 60 seconds by the runtime). The actual delay is posted to `POST /next-scan` so the countdown on the board matches reality
+4. `/tasker-scan` schedules `/tasker-watch` by calling `ScheduleWakeup` with `delaySeconds=30`. The runtime clamps this to a minimum of ~60 seconds. The actual delay is extracted from the wakeup confirmation text and posted to `POST /next-scan` so the countdown on the board reflects reality rather than the requested delay
 5. `/tasker-watch` wakes up, checks the pause state via `GET /paused`, and calls `/tasker-scan` again if not paused
 
 The loop runs until you pause or stop it. Tasks moved to Ready while the loop is running are picked up on the next cycle.
@@ -109,21 +109,32 @@ Sub-agents receive a self-contained prompt that includes the agent's role, the t
 
 If multiple tasks are ready, all sub-agents are spawned in a single message as parallel Agent tool calls.
 
+### Usage limits
+
+If an agent returns an error indicating a rate limit or usage cap, the team lead resets the task back to **Ready**, posts a warning banner to the board via `POST /pause-with-message`, and stops the loop. The board displays the message with a **Resume** button. Clicking Resume clears the banner and posts to `POST /resume` — then run `/tasker-scan` in Claude Code to restart the loop.
+
 ## Pause and resume
 
-The board's top bar shows a **countdown** to the next scan. Two buttons sit to the right of it:
+The top bar shows the current status and a **countdown** to the next scan. Two control buttons appear when the server is running:
 
 - **Pause** (‖) — stops the loop after the current scan; the board shows "Paused — run: /tasker-scan"
 - **Stop** (⏻) — shuts down the server entirely
 
 To resume after pausing, run `/tasker-scan` in Claude Code. It always resumes the loop and clears the paused state before scanning.
 
+## Chat panel
+
+Click the **chat bubble icon** in the top-right corner to open the chat panel. It slides in from the right side of the board and stays open as you work.
+
+The chat panel connects to a Claude instance that has full awareness of your current board state — all tasks and their statuses, and the list of configured agents. You can ask it to explain what's happening, create new tasks, or make changes to the board. The assistant has tool access and can update the board by calling the Tasker REST API directly.
+
+Conversations persist within the session. Each message is sent with a session ID so the assistant maintains context across exchanges.
+
 ## Settings
 
 Open the **Settings** panel (⚙) to:
 
 - **Toggle dark/light mode** — switches between the dark (default) and light themes; preference is saved in `localStorage`
-- **Export State JSON** — downloads the current `tasks.json` as a file
 - **Permissions** — toggle which tool categories sub-agents are allowed to use without a permission prompt. Changes are written to `.claude/settings.json` in the Tasker directory
 
 | Permission | Tools |
@@ -132,6 +143,8 @@ Open the **Settings** panel (⚙) to:
 | Edit / Write files | `Edit`, `Write` |
 | Bash commands | `Bash(*)` |
 | Web access | `WebFetch(*)`, `WebSearch(*)` |
+
+Note: the Settings modal no longer includes an Export State JSON button. To export state, copy `tasks.json` directly.
 
 ## Data
 
@@ -145,3 +158,8 @@ State is persisted in `tasks.json` and synced to the browser in real time over S
 | `tasker.html` | The board UI, served at `http://localhost:7842` |
 | `tasks.json` | Persistent task state (created automatically on first server start) |
 | `.claude/settings.json` | Agent permissions (created by the Settings panel) |
+| `~/.claude/commands/tasker.md` | `/tasker` skill — starts server, opens board, begins scan loop |
+| `~/.claude/commands/tasker-scan.md` | `/tasker-scan` skill — team lead that delegates tasks to sub-agents |
+| `~/.claude/commands/tasker-watch.md` | `/tasker-watch` skill — checks pause state and re-triggers scan |
+| `~/.claude/commands/tasker-pause.md` | `/tasker-pause` skill — pauses the loop |
+| `~/.claude/commands/tasker-stop.md` | `/tasker-stop` skill — shuts down the server |
