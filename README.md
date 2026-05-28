@@ -12,8 +12,8 @@ A local-first kanban board for Claude Code agents. Create tasks on the board, ru
 
 ## Getting Started
 
-1. Download the [latest release](https://github.com/Emberstone-Studio/Tasker/releases) (zip file).
-2. Drop the `Tasker/` folder anywhere in your VS Code project.
+1. Download the [latest release](https://github.com/Emberstone-Studio/Tasker/releases) (Tasker.zip).
+2. Unzip and drop the `Tasker/` folder anywhere in your VS Code project.
 3. Run the installer from that directory:
    ```
    node tasker.js
