@@ -387,13 +387,16 @@ Replace X with the actual seconds. If you cannot parse the number, use 90.
 **Important**: You are the coordinator. Never execute task work yourself — always delegate via Agent.`;
 
   const watchContent = `---
-description: Wait 30 seconds, check pause state, then invoke /tasker-scan if not paused
+description: Check server state, then invoke /tasker-scan if server is running and not paused
 ---
 
 ## 1. Check pause state
 
 Run \`curl -s http://localhost:7842/paused\`.
-- If \`{"paused":true}\` — stop immediately. Do not reschedule.
+
+- If the command **fails** (server unreachable) — stop immediately. Do not reschedule.
+- If the response is \`{"paused":true}\` — stop immediately. Do not reschedule.
+- If the response is \`{"paused":false}\` — proceed to step 2.
 
 ## 2. Run the next scan
 
