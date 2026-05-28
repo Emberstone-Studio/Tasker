@@ -51,7 +51,7 @@
       }
 
       :root {
-        --bg: #080808;
+        --bg: #050505;
         --bg-input: #0d0d0d;
         --bg-subtle: #0d0d0d;
         --bg-badge: #1e1e1e;
@@ -132,7 +132,7 @@
         height: 48px;
         padding: 0 16px;
         border-bottom: 1px solid var(--border);
-        background: var(--bg);
+        background: var(--bg-subtle);
         position: relative;
         z-index: 100;
         flex-shrink: 0;
@@ -155,6 +155,7 @@
       #logo {
         font-size: 13px;
         font-weight: 600;
+        font-family: "Verdana", sans-serif;
         color: var(--text-primary);
         letter-spacing: -0.3px;
         margin-right: 12px;
@@ -223,40 +224,39 @@
         opacity: 0.5;
       }
 
-      #btn-pause {
-        background: none;
-        border: none;
-        cursor: pointer;
-        padding: 4px 6px;
-        color: var(--text-tertiary);
-        transition: color 0.15s;
-        line-height: 1;
-      }
-
-      #btn-pause:hover {
-        color: var(--warning);
-      }
-
-      #btn-settings {
+      .topbar-btn {
         background: none;
         border: none;
         color: var(--text-secondary);
         cursor: pointer;
-        font-size: 18px;
-        padding: 4px 6px;
-        transition: color 0.15s;
+        padding: 6px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: color 0.15s, background 0.15s;
         line-height: 1;
       }
 
-      #btn-settings:hover {
+      .topbar-btn:hover {
         color: var(--text-primary);
+        background: var(--bg-subtle);
       }
+
+      #btn-pause:hover { color: var(--warning); }
+      #btn-stop:hover { color: var(--danger); }
 
       /* ─── MAIN LAYOUT ───────────────────────────────────── */
       #app {
         display: flex;
         flex-direction: column;
         height: 100vh;
+      }
+
+      #content-wrapper {
+        flex: 1;
+        display: flex;
+        overflow: hidden;
       }
 
       #main {
@@ -1298,8 +1298,31 @@
         background: #fff;
       }
 
-      /* ─── CHAT PANEL (tab) ──────────────────────────────── */
+      /* ─── CHAT PANEL (slide-in) ─────────────────────────── */
+      #chat-panel {
+        width: 0;
+        flex-shrink: 0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        background: var(--bg-subtle);
+        border-left: 1px solid transparent;
+        transition: width 0.22s ease, border-color 0.22s ease;
+      }
+
+      #chat-panel.open {
+        width: 340px;
+        border-color: var(--border);
+      }
+
+      #btn-chat-toggle.active {
+        color: var(--text-primary);
+        background: var(--bg-subtle);
+      }
+
       #chat-panel-inner {
+        width: 340px;
+        min-width: 340px;
         display: flex;
         flex-direction: column;
         height: 100%;
@@ -1441,23 +1464,24 @@
           <button class="tab-btn" onclick="switchTab('log')" id="tab-log">
             Log
           </button>
-          <button class="tab-btn" onclick="switchTab('chat')" id="tab-chat">
-            Chat
-          </button>
         </div>
         <div id="topbar-right">
           <div id="watcher-status" class="disconnected">
             <span id="watcher-label">Offline — run: /tasker</span>
           </div>
-          <button id="btn-pause" type="button" onclick="pauseTasker()" title="Pause scan loop" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="4" x2="7" y2="21"/><line x1="17" y1="4" x2="17" y2="21"/></svg></button>
-          <button id="btn-stop" onclick="stopTasker()" title="Stop Tasker" style="display:none;background:none;border:none;cursor:pointer;padding:4px 6px;color:var(--text-tertiary);transition:color 0.15s;line-height:1;" onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--text-tertiary)'"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg></button>
-          <button id="btn-settings" onclick="openSettings()" title="Settings">
-            ⚙
+          <button id="btn-pause" class="topbar-btn" type="button" onclick="pauseTasker()" title="Pause scan loop" style="display:none;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="4" x2="7" y2="21"/><line x1="17" y1="4" x2="17" y2="21"/></svg></button>
+          <button id="btn-stop" class="topbar-btn" type="button" onclick="stopTasker()" title="Stop Tasker" style="display:none;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg></button>
+          <button id="btn-chat-toggle" class="topbar-btn" type="button" onclick="toggleChatPanel()" title="Toggle chat">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </button>
+          <button id="btn-settings" class="topbar-btn" type="button" onclick="openSettings()" title="Settings">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           </button>
         </div>
       </div>
 
       <!-- Main Content -->
+      <div id="content-wrapper">
       <div id="main">
         <!-- BOARD -->
         <div id="tasks-panel" class="tab-panel active">
@@ -1484,27 +1508,30 @@
           <div id="log-empty" class="hidden">No log entries yet.</div>
         </div>
 
-        <!-- CHAT -->
-        <div id="chat-panel" class="tab-panel">
-          <div id="chat-panel-inner">
-            <div id="chat-panel-messages"></div>
-            <div id="chat-panel-input-row">
-              <textarea
-                id="chat-panel-textarea"
-                class="chat-input"
-                placeholder="Ask Claude about your board…"
-                rows="1"
-              ></textarea>
-              <button
-                type="button"
-                id="chat-panel-send"
-                class="btn-send"
-                onclick="sendChatMessage()"
-              >Send</button>
-            </div>
+      </div>
+
+      <!-- CHAT PANEL (slide-in from right) -->
+      <div id="chat-panel">
+        <div id="chat-panel-inner">
+          <div id="chat-panel-messages"></div>
+          <div id="chat-panel-input-row">
+            <textarea
+              id="chat-panel-textarea"
+              class="chat-input"
+              placeholder="Ask Claude about your board…"
+              rows="1"
+            ></textarea>
+            <button
+              type="button"
+              id="chat-panel-send"
+              class="btn-send"
+              onclick="sendChatMessage()"
+            >Send</button>
           </div>
         </div>
       </div>
+
+      </div><!-- /content-wrapper -->
     </div>
 
     <!-- ─── TASK DETAIL MODAL ────────────────────────────────── -->
@@ -2180,7 +2207,14 @@
         if (tab === "agents") renderAgents();
         if (tab === "log") renderLog();
         if (tab === "tasks") renderBoard();
-        if (tab === "chat") _initChatPanel();
+      }
+
+      function toggleChatPanel() {
+        const panel = document.getElementById("chat-panel");
+        const btn = document.getElementById("btn-chat-toggle");
+        const isOpen = panel.classList.toggle("open");
+        btn.classList.toggle("active", isOpen);
+        if (isOpen) _initChatPanel();
       }
 
       // ─────────────────────────────────────────────────────────────────

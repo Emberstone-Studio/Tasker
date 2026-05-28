@@ -211,7 +211,8 @@ const server = http.createServer((req, res) => {
       if (session_id) args.push("--resume", session_id);
       args.push(message);
 
-      const child = spawn("claude", args, { stdio: ["ignore", "pipe", "pipe"] });
+      const claudeBin = process.env.CLAUDE_BIN || "C:\\Users\\russp\\AppData\\Roaming\\npm\\node_modules\\@anthropic-ai\\claude-code\\bin\\claude.exe";
+      const child = spawn(claudeBin, args, { stdio: ["ignore", "pipe", "pipe"] });
 
       let stdout = "";
       let stderr = "";
