@@ -22,6 +22,8 @@ A local-first kanban board for Claude Code agents. Create tasks on the board, ru
 4. Reload your VS Code window so the new skills are available:
    - Open the command palette (`Ctrl+Shift+P` on Windows/Linux, `Cmd+Shift+P` on macOS)
    - Run **Reload Window**
+   OR
+   - Exit and restart VS Code.
 5. Run `/tasker` in Claude Code. This starts the server, opens the board in your browser, and begins the scan loop.
 
 ## Board

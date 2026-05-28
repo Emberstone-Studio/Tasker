@@ -24,6 +24,19 @@ const DEFAULT_STATE = {
   logs: []
 };
 
+// ─── Claude binary resolution ─────────────────────────────────────
+
+const { execSync } = require("child_process");
+let CLAUDE_BIN = process.env.CLAUDE_BIN || null;
+if (!CLAUDE_BIN) {
+  try {
+    CLAUDE_BIN = execSync("which claude", { shell: true, encoding: "utf8" }).trim();
+  } catch {
+    CLAUDE_BIN = "npx";
+  }
+}
+const CLAUDE_ARGS_PREFIX = (CLAUDE_BIN === "npx") ? ["@anthropic-ai/claude-code"] : [];
+
 // ─── State ────────────────────────────────────────────────────────
 
 let appState = null;
@@ -211,19 +224,23 @@ const server = http.createServer((req, res) => {
       if (session_id) args.push("--resume", session_id);
       args.push(message);
 
-      const claudeBin = process.env.CLAUDE_BIN || "C:\\Users\\russp\\AppData\\Roaming\\npm\\node_modules\\@anthropic-ai\\claude-code\\bin\\claude.exe";
-      const child = spawn(claudeBin, args, { stdio: ["ignore", "pipe", "pipe"] });
+      const child = spawn(CLAUDE_BIN, [...CLAUDE_ARGS_PREFIX, ...args], { stdio: ["ignore", "pipe", "pipe"] });
 
       let stdout = "";
       let stderr = "";
+      let replied = false;
       child.stdout.on("data", (d) => { stdout += d; });
       child.stderr.on("data", (d) => { stderr += d; });
 
       child.on("error", (err) => {
+        if (replied) return;
+        replied = true;
         json(res, 500, { error: `Failed to spawn claude: ${err.message}` });
       });
 
       child.on("close", (code) => {
+        if (replied) return;
+        replied = true;
         let reply = "";
         let newSessionId = session_id || "";
         const lines = stdout.split("\n");
