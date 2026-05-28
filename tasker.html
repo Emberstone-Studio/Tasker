@@ -38,7 +38,6 @@
             "color": "#8b5cf6"
           }
         ],
-        "models": [],
         "logs": []
       }
     </script>
@@ -72,6 +71,8 @@
         --danger: #ef4444;
         --success: #10b981;
         --warning: #f59e0b;
+        --warn-bg: rgba(245, 158, 11, 0.1);
+        --warn-text: #f59e0b;
         --font-mono: "JetBrains Mono", "Fira Mono", "Courier New", monospace;
         --font-ui:
           system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -93,6 +94,8 @@
         --text-primary: #111111;
         --text-secondary: #555555;
         --text-tertiary: #999999;
+        --warn-bg: rgba(180, 100, 0, 0.08);
+        --warn-text: #b45309;
       }
 
       html,
@@ -139,6 +142,14 @@
         display: flex;
         align-items: center;
         gap: 4px;
+      }
+
+      #logo-icon {
+        width: 26px;
+        height: 26px;
+        flex-shrink: 0;
+        color: var(--text-primary);
+        margin-right: 6px;
       }
 
       #logo {
@@ -906,8 +917,9 @@
       /* ─── PROGRESS BAR ──────────────────────────────────── */
       .card-progress {
         margin-top: 8px;
-        height: 2px;
+        height: 4px;
         background: var(--bg-badge);
+        border-radius: 2px;
         overflow: hidden;
         position: relative;
       }
@@ -915,7 +927,9 @@
       .card-progress-bar {
         height: 100%;
         background: var(--accent);
+        border-radius: 2px;
         transition: width 0.5s ease;
+        width: 0%;
       }
 
       @keyframes card-indeterminate {
@@ -1091,6 +1105,114 @@
         margin: 16px 0;
       }
 
+      /* ─── PIPELINE BADGE ───────────────────────────────── */
+      .card-pipeline-badge {
+        font-size: 10px;
+        font-family: var(--font-mono);
+        color: var(--text-tertiary);
+        margin-top: 4px;
+      }
+
+      /* ─── PIPELINE BUILDER ──────────────────────────────── */
+      .pipeline-steps {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 8px;
+      }
+
+      .pipeline-step-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .pipeline-step-row .form-select {
+        flex: 1;
+      }
+
+      .btn-remove-step {
+        background: none;
+        border: 1px solid var(--border);
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 14px;
+        line-height: 1;
+        padding: 4px 8px;
+        flex-shrink: 0;
+        transition: all 0.15s;
+      }
+
+      .btn-remove-step:hover {
+        border-color: var(--danger);
+        color: var(--danger);
+      }
+
+      .btn-add-step {
+        background: none;
+        border: 1px solid var(--border);
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 12px;
+        font-family: var(--font-ui);
+        padding: 5px 10px;
+        transition: all 0.15s;
+      }
+
+      .btn-add-step:hover {
+        border-color: var(--border-hover);
+        color: var(--text-primary);
+      }
+
+      .pipeline-hint {
+        margin-bottom: 8px;
+      }
+
+      /* ─── USAGE CAP BANNER ─────────────────────────────────── */
+      #usage-cap-banner {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 16px;
+        background: var(--warn-bg);
+        border-bottom: 1px solid rgba(245, 158, 11, 0.3);
+        color: var(--warn-text);
+        font-size: 13px;
+        flex-shrink: 0;
+      }
+
+      #usage-cap-message {
+        flex: 1;
+      }
+
+      #btn-usage-cap-resume {
+        background: var(--warn-text);
+        border: none;
+        color: #fff;
+        cursor: pointer;
+        font-size: 12px;
+        font-family: var(--font-ui);
+        font-weight: 500;
+        padding: 5px 12px;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
+      #btn-usage-cap-dismiss {
+        background: none;
+        border: none;
+        color: var(--warn-text);
+        cursor: pointer;
+        font-size: 18px;
+        line-height: 1;
+        padding: 0 2px;
+        opacity: 0.7;
+      }
+
+      #btn-usage-cap-dismiss:hover {
+        opacity: 1;
+      }
+
       /* ─── MISC UTILS ────────────────────────────────────── */
       .hidden {
         display: none !important;
@@ -1116,14 +1238,195 @@
       .full-width {
         width: 100%;
       }
+
+      /* ─── PERMISSION TOGGLES ────────────────────────────── */
+      .perm-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .perm-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .perm-label {
+        font-size: 13px;
+        color: var(--text-primary);
+      }
+
+      .perm-hint {
+        font-size: 11px;
+        color: var(--text-tertiary);
+        font-family: var(--font-mono);
+        margin-top: 1px;
+      }
+
+      .perm-toggle {
+        flex-shrink: 0;
+        width: 36px;
+        height: 20px;
+        border-radius: 10px;
+        background: var(--toggle-bg);
+        border: 1px solid var(--toggle-border);
+        position: relative;
+        cursor: pointer;
+        transition: background 0.2s, border-color 0.2s;
+      }
+
+      .perm-toggle.on {
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+
+      .perm-toggle-knob {
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--text-secondary);
+        transition: transform 0.2s, background 0.2s;
+      }
+
+      .perm-toggle.on .perm-toggle-knob {
+        transform: translateX(16px);
+        background: #fff;
+      }
+
+      /* ─── CHAT PANEL (tab) ──────────────────────────────── */
+      #chat-panel-inner {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+
+      #chat-panel-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      #chat-panel-input-row {
+        display: flex;
+        gap: 8px;
+        align-items: flex-end;
+        padding: 12px 16px;
+        border-top: 1px solid var(--border);
+        flex-shrink: 0;
+      }
+
+      #chat-panel-input-row .chat-input {
+        max-height: 140px;
+        overflow-y: auto;
+      }
+
+      .chat-panel-msg {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        max-width: 75%;
+      }
+
+      .chat-panel-msg.user {
+        align-self: flex-end;
+        align-items: flex-end;
+      }
+
+      .chat-panel-msg.assistant {
+        align-self: flex-start;
+        align-items: flex-start;
+        max-width: 85%;
+      }
+
+      .chat-panel-msg.error {
+        align-self: center;
+        align-items: center;
+        max-width: 90%;
+      }
+
+      .chat-panel-bubble {
+        padding: 8px 12px;
+        font-size: 13px;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .chat-panel-msg.user .chat-panel-bubble {
+        background: rgba(88, 101, 242, 0.15);
+        border: 1px solid rgba(88, 101, 242, 0.3);
+        color: var(--text-primary);
+      }
+
+      .chat-panel-msg.assistant .chat-panel-bubble {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        color: var(--text-primary);
+      }
+
+      .chat-panel-msg.error .chat-panel-bubble {
+        background: rgba(239, 68, 68, 0.08);
+        border: 1px solid rgba(239, 68, 68, 0.25);
+        color: var(--danger);
+        font-size: 12px;
+        font-family: var(--font-mono);
+      }
+
+      .chat-panel-meta {
+        font-size: 10px;
+        color: var(--text-tertiary);
+        font-family: var(--font-mono);
+      }
+
+      .chat-panel-thinking {
+        color: var(--text-tertiary);
+        font-size: 12px;
+        font-family: var(--font-mono);
+        font-style: italic;
+        padding: 4px 0;
+        align-self: flex-start;
+      }
+
+      #chat-panel-empty {
+        color: var(--text-tertiary);
+        font-size: 12px;
+        font-family: var(--font-mono);
+        padding: 20px 0;
+        text-align: center;
+      }
     </style>
   </head>
   <body>
     <!-- ─── MAIN APP ───────────────────────────────────────── -->
     <div id="app">
+      <!-- Usage Cap Banner -->
+      <div id="usage-cap-banner" class="hidden">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span id="usage-cap-message"></span>
+        <button type="button" id="btn-usage-cap-resume" onclick="resumeFromUsageCap()">Resume</button>
+        <button type="button" id="btn-usage-cap-dismiss" onclick="dismissUsageCapBanner()" title="Dismiss">&times;</button>
+      </div>
+
       <!-- Top Bar -->
       <div id="topbar">
         <div id="topbar-left">
+          <svg id="logo-icon" viewBox="0 0 100 100" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <path d="M22.74,68.64l-2.65-1.18.02,12.45c1.91,1.06,3.11,3.03,2.63,5.17s-2.25,3.57-4.39,3.6-3.97-1.37-4.51-3.45.58-4.23,2.56-5.31v-19.19c.02-3.91,2.58-7.12,6.33-8.07,0,0,.08,18.28,0,15.98Z"/>
+            <path d="M77.26,52.65c3.75.95,6.31,4.17,6.32,8.07v19.19c1.99,1.08,3.13,3.14,2.57,5.31s-2.36,3.48-4.51,3.45-3.92-1.54-4.39-3.6.71-4.1,2.63-5.17l.02-12.45-2.65,1.18c-.08,2.3,0-15.98,0-15.98Z"/>
+            <path d="M65.29,91.07c-7.91,6-18.24,6.87-26.92,2.29-8.69-4.61-14.45-13.47-14.48-23.42l-.05-17.29h52.32s-.02,16.96-.02,16.96c0,8.42-4.15,16.38-10.85,21.46ZM58.04,60.94c0-1.07-.87-1.94-1.94-1.94s-1.94.87-1.94,1.94.87,1.94,1.94,1.94,1.94-.87,1.94-1.94ZM64.02,60.94c0-1.07-.87-1.94-1.94-1.94s-1.94.87-1.94,1.94.87,1.94,1.94,1.94,1.94-.87,1.94-1.94ZM69.98,60.93c0-1.07-.87-1.94-1.94-1.94s-1.94.87-1.94,1.94.87,1.94,1.94,1.94,1.94-.87,1.94-1.94Z"/>
+            <path d="M76.16,50.48H23.85s.01-8.42.01-8.42c.02-11.21,7.75-20.76,18.5-23.74,5.69-1.41,9.68-1.6,15.21-.06,10.81,3.01,18.54,12.68,18.56,23.97l.02,8.25ZM68.64,36.05c-.11-4.21-3.53-8.19-7.79-8.19l-21.82.02c-4.26,0-7.55,4.1-7.67,8.17-.13,4.78,3.67,8.68,8.39,8.66l20.91-.05c4.5-.01,8.08-4.08,7.97-8.61Z"/>
+            <path d="M51.78,16.4h-3.6s-.03-3.96-.03-3.96c-2.05-.91-3.05-3.03-2.57-5.22.43-1.97,2.31-3.5,4.41-3.49s3.98,1.49,4.43,3.52c.48,2.19-.56,4.36-2.64,5.24v3.92Z"/>
+            <circle cx="41.23" cy="36.23" r="3.55"/>
+            <circle cx="58.75" cy="36.23" r="3.54"/>
+          </svg>
           <span id="logo">Tasker</span>
           <button
             class="tab-btn active"
@@ -1137,6 +1440,9 @@
           </button>
           <button class="tab-btn" onclick="switchTab('log')" id="tab-log">
             Log
+          </button>
+          <button class="tab-btn" onclick="switchTab('chat')" id="tab-chat">
+            Chat
           </button>
         </div>
         <div id="topbar-right">
@@ -1176,6 +1482,27 @@
         <!-- LOG -->
         <div id="log-panel" class="tab-panel">
           <div id="log-empty" class="hidden">No log entries yet.</div>
+        </div>
+
+        <!-- CHAT -->
+        <div id="chat-panel" class="tab-panel">
+          <div id="chat-panel-inner">
+            <div id="chat-panel-messages"></div>
+            <div id="chat-panel-input-row">
+              <textarea
+                id="chat-panel-textarea"
+                class="chat-input"
+                placeholder="Ask Claude about your board…"
+                rows="1"
+              ></textarea>
+              <button
+                type="button"
+                id="chat-panel-send"
+                class="btn-send"
+                onclick="sendChatMessage()"
+              >Send</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1326,14 +1653,50 @@
               <svg id="icon-sun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
             </div>
           </div>
-          <div class="settings-section">
-            <div class="settings-section-title">Data</div>
-            <div style="display: flex; gap: 8px; flex-wrap: wrap">
-              <button class="btn-secondary" onclick="exportState()">
-                Export State JSON
-              </button>
+          <div class="settings-section mb-0">
+            <div class="settings-section-title">Permissions</div>
+            <div class="perm-list">
+              <div class="perm-row">
+                <div>
+                  <div class="perm-label">Read files</div>
+                  <div class="perm-hint">Read</div>
+                </div>
+                <div class="perm-toggle" id="perm-toggle-read" onclick="togglePerm('read')">
+                  <div class="perm-toggle-knob"></div>
+                </div>
+              </div>
+              <div class="perm-row">
+                <div>
+                  <div class="perm-label">Edit / Write files</div>
+                  <div class="perm-hint">Edit, Write</div>
+                </div>
+                <div class="perm-toggle" id="perm-toggle-edit" onclick="togglePerm('edit')">
+                  <div class="perm-toggle-knob"></div>
+                </div>
+              </div>
+              <div class="perm-row">
+                <div>
+                  <div class="perm-label">Bash commands</div>
+                  <div class="perm-hint">Bash(*)</div>
+                </div>
+                <div class="perm-toggle" id="perm-toggle-bash" onclick="togglePerm('bash')">
+                  <div class="perm-toggle-knob"></div>
+                </div>
+              </div>
+              <div class="perm-row">
+                <div>
+                  <div class="perm-label">Web access</div>
+                  <div class="perm-hint">WebFetch(*), WebSearch(*)</div>
+                </div>
+                <div class="perm-toggle" id="perm-toggle-web" onclick="togglePerm('web')">
+                  <div class="perm-toggle-knob"></div>
+                </div>
+              </div>
             </div>
           </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-primary" onclick="savePermissions()">Save Permissions</button>
         </div>
       </div>
     </div>
@@ -1377,6 +1740,12 @@
               id="at-agent"
               title="Agent"
             ></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Pipeline steps (optional)</label>
+            <div class="form-hint pipeline-hint">Chain agents in sequence. Each agent's output is passed to the next.</div>
+            <div class="pipeline-steps" id="at-pipeline-steps"></div>
+            <button type="button" class="btn-add-step" onclick="addPipelineStep('at-pipeline-steps')">+ Add step</button>
           </div>
           <div class="form-group">
             <label class="form-label">Priority</label>
@@ -1458,6 +1827,26 @@
         if (!el.classList.contains("connected")) return;
         fetch(`${WATCHER_URL}/pause`, { method: "POST" }).catch(() => {});
         setWatcherStatus("paused", "Paused — run: /tasker-scan");
+      }
+
+      function showUsageCapBanner(message) {
+        const banner = document.getElementById("usage-cap-banner");
+        const msg = document.getElementById("usage-cap-message");
+        if (!banner || !msg) return;
+        msg.textContent = message;
+        banner.classList.remove("hidden");
+      }
+
+      function dismissUsageCapBanner() {
+        const banner = document.getElementById("usage-cap-banner");
+        if (banner) banner.classList.add("hidden");
+      }
+
+      function resumeFromUsageCap() {
+        dismissUsageCapBanner();
+        fetch(`${WATCHER_URL}/resume`, { method: "POST" }).catch(() => {});
+        setWatcherStatus("connected", "Running");
+        startCountdown(60);
       }
 
       function connectWatcher() {
@@ -1554,7 +1943,7 @@
           } else {
             setWatcherStatus("connected", "Running");
             const elapsed = ev.lastHeartbeat ? Math.floor((Date.now() - ev.lastHeartbeat) / 1000) : 0;
-            startCountdown(Math.max(1, 30 - elapsed));
+            startCountdown(Math.max(1, 60 - elapsed));
           }
           return;
         }
@@ -1567,16 +1956,24 @@
             setWatcherStatus("paused", "Paused — run: /tasker-scan");
           } else {
             setWatcherStatus("connected", "Running");
-            startCountdown(30);
+            startCountdown(60);
           }
           return;
         }
         if (ev.type === "scan_heartbeat") {
-          startCountdown(30);
+          // countdown is driven by next_scan events; heartbeat only signals liveness
+          return;
+        }
+        if (ev.type === "next_scan") {
+          if (typeof ev.seconds === "number" && ev.seconds > 0) startCountdown(ev.seconds);
           return;
         }
         if (ev.type === "shutdown") {
           setWatcherStatus("disconnected", "Offline — run: /tasker");
+          return;
+        }
+        if (ev.type === "usage_cap") {
+          showUsageCapBanner(ev.message || "Usage limit reached.");
           return;
         }
         if (ev.type === "task_update") {
@@ -1607,8 +2004,16 @@
             persistState();
             const bar = document.querySelector(`#card-${task.id} .card-progress-bar`);
             if (bar) {
+              const activity = task.activity || [];
+              const lastInProgressIdx = activity.reduce((last, a, i) =>
+                (a.type === "moved" && /^in progress/i.test(a.content)) ? i : last, -1);
+              const outputCount = activity.slice(lastInProgressIdx + 1).filter(a => a.type === "output").length;
+              const expectedSteps = (task.pipeline && task.pipeline.length > 0) ? task.pipeline.length + 1 : 1;
+              const pct = outputCount > 0
+                ? Math.round(Math.min(outputCount / expectedSteps, 1) * 100)
+                : ev.progress;
               bar.classList.remove("indeterminate");
-              bar.style.width = ev.progress + "%";
+              bar.style.width = pct + "%";
             }
           }
         } else if (ev.type === "new_task") {
@@ -1652,6 +2057,114 @@
       }
 
       // ─────────────────────────────────────────────────────────────────
+      // CHAT PANEL
+      // ─────────────────────────────────────────────────────────────────
+
+      let _chatSessionId = null;
+
+      function _chatAppendMessage(role, text) {
+        const list = document.getElementById("chat-panel-messages");
+        if (!list) return;
+
+        const empty = document.getElementById("chat-panel-empty");
+        if (empty) empty.remove();
+
+        const wrap = document.createElement("div");
+        wrap.className = `chat-panel-msg ${role}`;
+
+        const bubble = document.createElement("div");
+        bubble.className = "chat-panel-bubble";
+        bubble.textContent = text;
+
+        const meta = document.createElement("span");
+        meta.className = "chat-panel-meta";
+        const now = new Date();
+        meta.textContent = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+
+        wrap.appendChild(bubble);
+        wrap.appendChild(meta);
+        list.appendChild(wrap);
+        list.scrollTop = list.scrollHeight;
+        return wrap;
+      }
+
+      function _chatAppendThinking() {
+        const list = document.getElementById("chat-panel-messages");
+        if (!list) return null;
+        const el = document.createElement("div");
+        el.className = "chat-panel-thinking";
+        el.textContent = "thinking…";
+        list.appendChild(el);
+        list.scrollTop = list.scrollHeight;
+        return el;
+      }
+
+      async function sendChatMessage() {
+        const textarea = document.getElementById("chat-panel-textarea");
+        const sendBtn = document.getElementById("chat-panel-send");
+        if (!textarea || !sendBtn) return;
+
+        const message = textarea.value.trim();
+        if (!message) return;
+
+        textarea.value = "";
+        textarea.style.height = "";
+        sendBtn.disabled = true;
+
+        _chatAppendMessage("user", message);
+        const thinking = _chatAppendThinking();
+
+        try {
+          const res = await fetch(`${WATCHER_URL}/chat`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message, session_id: _chatSessionId }),
+          });
+          const data = await res.json();
+
+          if (thinking) thinking.remove();
+
+          if (data.error) {
+            _chatAppendMessage("error", data.error);
+          } else {
+            _chatSessionId = data.session_id || _chatSessionId;
+            _chatAppendMessage("assistant", data.reply || "(no reply)");
+          }
+        } catch (err) {
+          if (thinking) thinking.remove();
+          _chatAppendMessage("error", `Network error: ${err.message}`);
+        } finally {
+          sendBtn.disabled = false;
+          textarea.focus();
+        }
+      }
+
+      function _initChatPanel() {
+        const list = document.getElementById("chat-panel-messages");
+        if (list && list.children.length === 0) {
+          const empty = document.createElement("div");
+          empty.id = "chat-panel-empty";
+          empty.textContent = "No messages yet. Ask Claude anything about your board.";
+          list.appendChild(empty);
+        }
+
+        const textarea = document.getElementById("chat-panel-textarea");
+        if (textarea && !textarea._chatBound) {
+          textarea._chatBound = true;
+          textarea.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              sendChatMessage();
+            }
+          });
+          textarea.addEventListener("input", () => {
+            textarea.style.height = "";
+            textarea.style.height = Math.min(textarea.scrollHeight, 140) + "px";
+          });
+        }
+      }
+
+      // ─────────────────────────────────────────────────────────────────
       // TAB NAVIGATION
       // ─────────────────────────────────────────────────────────────────
 
@@ -1667,6 +2180,7 @@
         if (tab === "agents") renderAgents();
         if (tab === "log") renderLog();
         if (tab === "tasks") renderBoard();
+        if (tab === "chat") _initChatPanel();
       }
 
       // ─────────────────────────────────────────────────────────────────
@@ -1708,10 +2222,16 @@
       }
 
       function renderCard(task) {
-        const agent = state.agents.find((a) => a.id === task.agent_id);
-        const color = agent ? agent.color : "#333";
+        const effectiveAgentId = (task.pipeline && task.pipeline.length > 0)
+          ? task.pipeline[task.pipeline_step || 0]
+          : task.agent_id;
+        const agent = state.agents.find((a) => a.id === effectiveAgentId);
+        const color = agent ? agent.color : (task.agent_id === null && !task.pipeline?.length ? "var(--accent)" : "#333");
         const priorityClass = task.priority || "medium";
-        const agentName = agent ? agent.name : "—";
+        const agentName = agent ? agent.name : (task.agent_id === null ? "Auto" : "—");
+        const pipelineBadge = (task.pipeline && task.pipeline.length > 0)
+          ? `<div class="card-pipeline-badge">Step ${(task.pipeline_step || 0) + 1}/${task.pipeline.length}</div>`
+          : "";
         return `
     <div class="task-card" id="card-${task.id}"
       style="border-left-color: ${color}"
@@ -1724,6 +2244,7 @@
         <div class="priority-dot ${priorityClass}" title="${priorityClass} priority"></div>
       </div>
       ${task.description ? `<div class="card-desc">${escHtml(task.description)}</div>` : ""}
+      ${pipelineBadge}
       <div class="card-meta">
         <div class="card-agent-info">
           <span class="agent-dot" style="background:${color}"></span>
@@ -1731,7 +2252,18 @@
         </div>
         <span class="card-date">${fmtDate(task.created_at)}</span>
       </div>
-      ${task.status === "in_progress" ? `<div class="card-progress"><div class="card-progress-bar${task.progress !== undefined ? `" style="width:${task.progress}%` : " indeterminate"}"></div></div>` : ""}
+      ${task.status === "in_progress" ? (() => {
+        const activity = task.activity || [];
+        const lastInProgressIdx = activity.reduce((last, a, i) =>
+          (a.type === "moved" && /^in progress/i.test(a.content)) ? i : last, -1);
+        const outputCount = activity.slice(lastInProgressIdx + 1).filter(a => a.type === "output").length;
+        const expectedSteps = (task.pipeline && task.pipeline.length > 0) ? task.pipeline.length + 1 : 1;
+        const pct = outputCount > 0
+          ? Math.round(Math.min(outputCount / expectedSteps, 1) * 100)
+          : (task.progress !== undefined ? task.progress : 0);
+        const isIndeterminate = outputCount === 0 && task.progress === undefined;
+        return `<div class="card-progress"><div class="card-progress-bar${isIndeterminate ? " indeterminate" : `" style="width:${pct}%`}"></div></div>`;
+      })() : ""}
     </div>
   `;
       }
@@ -1812,13 +2344,9 @@
       function renderTaskModalBody(task) {
         const body = document.getElementById("task-modal-body");
         const footer = document.getElementById("task-modal-footer");
-        const agentOptions = [
-          '<option value="">— No agent —</option>',
-          ...state.agents.map(
-            (a) =>
-              `<option value="${a.id}" ${a.id === task.agent_id ? "selected" : ""}>${escHtml(a.name)}</option>`,
-          ),
-        ].join("");
+        const agentOptions = buildAgentOptions(task.agent_id);
+        const existingPipeline = task.pipeline || [];
+        const pipelineStepsHTML = existingPipeline.map((agId) => buildPipelineStepRow(agId)).join("");
         body.innerHTML = `
     <div class="form-group">
       <label class="form-label">Title</label>
@@ -1831,6 +2359,12 @@
     <div class="form-group">
       <label class="form-label">Agent</label>
       <select class="form-select" id="td-agent">${agentOptions}</select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Pipeline steps (optional)</label>
+      <div class="pipeline-hint form-hint">Chain agents in sequence. Each agent's output is passed to the next.</div>
+      <div class="pipeline-steps" id="td-pipeline-steps">${pipelineStepsHTML}</div>
+      <button type="button" class="btn-add-step" onclick="addPipelineStep('td-pipeline-steps')">+ Add step</button>
     </div>
     <div class="form-group">
       <label class="form-label">Priority</label>
@@ -1890,6 +2424,13 @@
           document.getElementById("td-title").value.trim() || task.title;
         task.description = document.getElementById("td-desc").value.trim();
         task.agent_id = document.getElementById("td-agent").value || null;
+        task.pipeline = collectPipelineSteps("td-pipeline-steps");
+        if (task.pipeline.length === 0) {
+          delete task.pipeline;
+          delete task.pipeline_step;
+        } else {
+          task.pipeline_step = task.pipeline_step || 0;
+        }
         const pri = document.querySelector('input[name="td-priority"]:checked');
         task.priority = pri ? pri.value : "medium";
         task.updated_at = new Date().toISOString();
@@ -1971,7 +2512,7 @@
             <div class="chat-input-row">
               <textarea class="chat-input" id="chat-input-${task.id}" placeholder="Add a comment for the agent…" rows="1"
                 onkeydown="handleChatKeydown(event,'${task.id}')"></textarea>
-              <button class="btn-send" id="chat-send-${task.id}" onclick="sendChatMessage('${task.id}')">Send</button>
+              <button class="btn-send" id="chat-send-${task.id}" onclick="sendTaskChatMessage('${task.id}')">Send</button>
             </div>
           </div>
         `;
@@ -1988,11 +2529,11 @@
       function handleChatKeydown(e, taskId) {
         if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault();
-          sendChatMessage(taskId);
+          sendTaskChatMessage(taskId);
         }
       }
 
-      function sendChatMessage(taskId) {
+      function sendTaskChatMessage(taskId) {
         const msgEl = document.getElementById("chat-input-" + taskId);
         if (!msgEl) return;
         const msg = msgEl.value.trim();
@@ -2032,6 +2573,7 @@
             }
           });
         populateAgentSelect("at-agent", null);
+        document.getElementById("at-pipeline-steps").innerHTML = "";
         openModal("addtask-modal");
       }
 
@@ -2048,6 +2590,7 @@
         }
         const pri = document.querySelector('input[name="at-priority"]:checked');
         const now = new Date().toISOString();
+        const pipeline = collectPipelineSteps("at-pipeline-steps");
         const task = {
           id: uid(),
           title,
@@ -2061,6 +2604,10 @@
             { timestamp: now, type: "created", content: "Task created" },
           ],
         };
+        if (pipeline.length > 0) {
+          task.pipeline = pipeline;
+          task.pipeline_step = 0;
+        }
         state.tasks.push(task);
         addLog(task.id, `Task "${task.title}" created in ${addTaskStatus}`);
         persistState();
@@ -2227,8 +2774,77 @@
       // SETTINGS
       // ─────────────────────────────────────────────────────────────────
 
+      // ─── Permissions ────────────────────────────────────────────────
+
+      const PERM_MAP = {
+        read: ["Read"],
+        edit: ["Edit", "Write"],
+        bash: ["Bash(*)"],
+        web:  ["WebFetch(*)", "WebSearch(*)"],
+      };
+
+      let _permState = { read: false, edit: false, bash: false, web: false };
+
+      function togglePerm(key) {
+        _permState[key] = !_permState[key];
+        renderPermToggles();
+      }
+
+      function renderPermToggles() {
+        for (const key of Object.keys(PERM_MAP)) {
+          const el = document.getElementById("perm-toggle-" + key);
+          if (!el) continue;
+          if (_permState[key]) {
+            el.classList.add("on");
+          } else {
+            el.classList.remove("on");
+          }
+        }
+      }
+
+      function applyPermState(allowArr) {
+        for (const key of Object.keys(PERM_MAP)) {
+          _permState[key] = PERM_MAP[key].every((e) => allowArr.includes(e));
+        }
+        renderPermToggles();
+      }
+
+      function buildAllowArray() {
+        const allow = [];
+        for (const key of Object.keys(PERM_MAP)) {
+          if (_permState[key]) {
+            for (const entry of PERM_MAP[key]) {
+              if (!allow.includes(entry)) allow.push(entry);
+            }
+          }
+        }
+        return allow;
+      }
+
+      async function loadPermissions() {
+        try {
+          const res = await fetch(`${WATCHER_URL}/permissions`);
+          if (!res.ok) return;
+          const data = await res.json();
+          applyPermState(data.allow || []);
+        } catch {}
+      }
+
+      async function savePermissions() {
+        const allow = buildAllowArray();
+        try {
+          await fetch(`${WATCHER_URL}/permissions`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ allow }),
+          });
+        } catch {}
+        closeModal("settings-modal");
+      }
+
       function openSettings() {
         updateThemeButton();
+        loadPermissions();
         openModal("settings-modal");
       }
 
@@ -2260,21 +2876,6 @@
         sun.style.color  = isLight ? "var(--text-primary)"  : "var(--text-tertiary)";
       }
 
-      function exportState() {
-        const blob = new Blob([JSON.stringify(state, null, 2)], {
-          type: "application/json",
-        });
-        const url = URL.createObjectURL(blob);
-        const a = Object.assign(document.createElement("a"), {
-          href: url,
-          download: "tasker-state.json",
-        });
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(url), 5000);
-      }
-
       // ─────────────────────────────────────────────────────────────────
       // SETUP / SPLASH
       // ─────────────────────────────────────────────────────────────────
@@ -2299,16 +2900,46 @@
       // SELECT HELPERS
       // ─────────────────────────────────────────────────────────────────
 
+      function buildAgentOptions(selectedId) {
+        return [
+          `<option value="" ${selectedId === null || selectedId === undefined ? "selected" : ""}>Auto (Team Lead decides)</option>`,
+          ...state.agents.map(
+            (a) =>
+              `<option value="${a.id}" ${a.id === selectedId ? "selected" : ""}>${escHtml(a.name)}</option>`,
+          ),
+        ].join("");
+      }
+
       function populateAgentSelect(selectId, selectedId) {
         const sel = document.getElementById(selectId);
-        sel.innerHTML =
-          '<option value="">— No agent —</option>' +
-          state.agents
-            .map(
-              (a) =>
-                `<option value="${a.id}" ${a.id === selectedId ? "selected" : ""}>${escHtml(a.name)}</option>`,
-            )
-            .join("");
+        sel.innerHTML = buildAgentOptions(selectedId);
+      }
+
+      function buildPipelineStepRow(selectedAgentId) {
+        const opts = state.agents
+          .map(
+            (a) =>
+              `<option value="${a.id}" ${a.id === selectedAgentId ? "selected" : ""}>${escHtml(a.name)}</option>`,
+          )
+          .join("");
+        return `<div class="pipeline-step-row"><select class="form-select">${opts}</select><button type="button" class="btn-remove-step" onclick="this.parentElement.remove()">×</button></div>`;
+      }
+
+      function addPipelineStep(containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        const firstAgentId = state.agents.length > 0 ? state.agents[0].id : "";
+        const div = document.createElement("div");
+        div.innerHTML = buildPipelineStepRow(firstAgentId);
+        container.appendChild(div.firstElementChild);
+      }
+
+      function collectPipelineSteps(containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return [];
+        return Array.from(container.querySelectorAll(".pipeline-step-row select"))
+          .map((s) => s.value)
+          .filter(Boolean);
       }
 
       // ─────────────────────────────────────────────────────────────────

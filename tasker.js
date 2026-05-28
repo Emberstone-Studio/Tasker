@@ -7,6 +7,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
+const { spawn } = require("child_process");
 
 const PORT = 7842;
 const HTML_FILE = path.join(__dirname, "tasker.html");
@@ -20,7 +21,6 @@ const DEFAULT_STATE = {
     { id: "agent-reviewer-default", name: "Reviewer", role: "You are a review agent. Your job is to review output from other agents, flag issues, identify improvements, and provide actionable feedback. Be direct and specific.", color: "#f59e0b" },
     { id: "agent-writer-default", name: "Writer", role: "You are a writing agent. Your job is to write documentation, copy, summaries, and prose. Match the existing tone and style. Be clear and concise.", color: "#8b5cf6" }
   ],
-  models: [],
   logs: []
 };
 
@@ -107,6 +107,19 @@ const server = http.createServer((req, res) => {
     return json(res, 200, { ok: true, paused: true });
   }
 
+  if (req.method === "POST" && req.url === "/pause-with-message") {
+    let raw = "";
+    req.on("data", (chunk) => (raw += chunk));
+    req.on("end", () => {
+      const { message } = JSON.parse(raw || "{}");
+      paused = true;
+      broadcast({ type: "tasker_state", paused: true });
+      broadcast({ type: "usage_cap", message: message || "Usage limit reached." });
+      json(res, 200, { ok: true, paused: true });
+    });
+    return;
+  }
+
   if (req.method === "POST" && req.url === "/resume") {
     paused = false;
     broadcast({ type: "tasker_state", paused: false });
@@ -118,6 +131,20 @@ const server = http.createServer((req, res) => {
     return json(res, 200, { paused });
   }
 
+  if (req.method === "POST" && req.url === "/next-scan") {
+    let body = "";
+    req.on("data", d => body += d);
+    req.on("end", () => {
+      let parsed;
+      try { parsed = JSON.parse(body || "{}"); } catch { return json(res, 400, { error: "invalid JSON" }); }
+      const seconds = Number(parsed.seconds);
+      if (!Number.isFinite(seconds) || seconds <= 0) return json(res, 400, { error: "seconds must be a positive number" });
+      broadcast({ type: "next_scan", seconds });
+      return json(res, 200, { ok: true });
+    });
+    return;
+  }
+
   if (req.method === "POST" && req.url === "/shutdown") {
     json(res, 200, { ok: true });
     broadcast({ type: "shutdown" });
@@ -125,10 +152,106 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (req.method === "GET" && req.url === "/permissions") {
+    const settingsFile = path.join(__dirname, ".claude", "settings.json");
+    try {
+      const data = JSON.parse(fs.readFileSync(settingsFile, "utf8"));
+      return json(res, 200, { allow: (data.permissions && data.permissions.allow) || [] });
+    } catch {
+      return json(res, 200, { allow: [] });
+    }
+  }
+
+  if (req.method === "POST" && req.url === "/permissions") {
+    let raw = "";
+    req.on("data", (chunk) => (raw += chunk));
+    req.on("end", () => {
+      try {
+        const body = JSON.parse(raw);
+        const claudeDir = path.join(__dirname, ".claude");
+        fs.mkdirSync(claudeDir, { recursive: true });
+        const settingsFile = path.join(claudeDir, "settings.json");
+        const settings = { permissions: { allow: body.allow || [] } };
+        fs.writeFileSync(settingsFile, JSON.stringify(settings, null, 2), "utf8");
+        json(res, 200, { ok: true });
+      } catch (err) {
+        json(res, 400, { error: err.message });
+      }
+    });
+    return;
+  }
+
+  if (req.method === "POST" && req.url === "/chat") {
+    let raw = "";
+    req.on("data", (chunk) => (raw += chunk));
+    req.on("end", () => {
+      let body;
+      try { body = JSON.parse(raw); } catch { return json(res, 400, { error: "invalid JSON" }); }
+
+      const message = (body.message || "").trim();
+      if (!message) return json(res, 400, { error: "message is required" });
+      const session_id = body.session_id || null;
+
+      const tasks = (appState && appState.tasks || [])
+        .map((t) => `  - [${t.status}] ${t.title}`)
+        .join("\n") || "  (no tasks)";
+      const agents = (appState && appState.agents || [])
+        .map((a) => a.name)
+        .join(", ") || "(none)";
+
+      const systemPrompt =
+        `You are a helpful assistant embedded in Tasker, a Claude Code task management board. ` +
+        `You have full tool access and can act on the board by calling the Tasker REST API at http://localhost:${PORT}. ` +
+        `Current board state:\n${tasks}\n` +
+        `Agents available: ${agents}. ` +
+        `To update the board, POST to http://localhost:${PORT}/state with the full updated state JSON.`;
+
+      const args = ["--print", "--output-format", "stream-json", "--verbose",
+                    "--system-prompt", systemPrompt];
+      if (session_id) args.push("--resume", session_id);
+      args.push(message);
+
+      const child = spawn("claude", args, { stdio: ["ignore", "pipe", "pipe"] });
+
+      let stdout = "";
+      let stderr = "";
+      child.stdout.on("data", (d) => { stdout += d; });
+      child.stderr.on("data", (d) => { stderr += d; });
+
+      child.on("error", (err) => {
+        json(res, 500, { error: `Failed to spawn claude: ${err.message}` });
+      });
+
+      child.on("close", (code) => {
+        let reply = "";
+        let newSessionId = session_id || "";
+        const lines = stdout.split("\n");
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+          try {
+            const obj = JSON.parse(trimmed);
+            if (obj.type === "result") {
+              reply = obj.result || "";
+              if (obj.session_id) newSessionId = obj.session_id;
+              break;
+            }
+          } catch {}
+        }
+        if (code !== 0 && !reply) {
+          return json(res, 500, { error: stderr.trim() || `claude exited with code ${code}` });
+        }
+        json(res, 200, { reply, session_id: newSessionId });
+      });
+    });
+    return;
+  }
+
   json(res, 404, { error: "Not found" });
 });
 
 // ─── Claude Code skill installer ─────────────────────────────────
+
 
 const QUEUE_STEPS = `
 ## 2. Check the queue
@@ -159,7 +282,16 @@ If multiple tasks are ready, spawn all agents in a **single message** as paralle
 
 ## 5. Collect results and update state
 
-When each agent finishes, read the current \`${STATE_FILE}\` again, then:
+When each agent finishes, inspect its result **before** updating state:
+
+**If the agent returned an error containing "rate limit", "usage limit", "overloaded", or "capacity":**
+- Reset the task's \`status\` back to \`"ready"\` in ${STATE_FILE}
+- POST to \`http://localhost:7842/pause-with-message\` with a JSON body like:
+  \`{"message": "Paused: Claude usage limit hit while working on \\"<task title>\\". Resume when ready."}\`
+- Stop immediately — do not update task state, do not call ScheduleWakeup.
+
+**Otherwise (normal completion):**
+- Read the current \`${STATE_FILE}\` again, then:
 - Set the task's \`status\` to \`"in_review"\`
 - Append to its \`activity\` array: \`{"timestamp": "<ISO timestamp>", "type": "output", "content": "<agent's summary>"}\`
 - POST the full patched state to \`http://localhost:7842/state\``;
@@ -224,7 +356,13 @@ ${QUEUE_STEPS}
 
 ## 6. Start the watch loop
 
-Use ScheduleWakeup with \`delaySeconds=30\` and \`prompt="/tasker-watch"\` to keep the loop running.
+Call ScheduleWakeup with \`delaySeconds=30\` and \`prompt="/tasker-watch"\`. The result text looks like \`"Next wakeup scheduled for ... (in 101s)"\`. Extract the number using a pattern like \`/\\(in (\\d+)s\\)/\`, then POST it:
+
+\`\`\`bash
+curl -s -X POST http://localhost:7842/next-scan -H "Content-Type: application/json" -d "{\\"seconds\\": X}"
+\`\`\`
+
+Replace X with the actual seconds. If you cannot parse the number, use 90.
 
 ---
 
