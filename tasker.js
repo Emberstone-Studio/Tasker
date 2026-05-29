@@ -10,7 +10,7 @@ const path = require("path");
 const os = require("os");
 const { spawn } = require("child_process");
 
-const VERSION = "1.0.0";
+const VERSION = "1.2.0";
 const GITHUB_REPO = "Emberstone-Studio/Tasker";
 const INSTALL_DIR = path.join(os.homedir(), ".claude", "tasker");
 
