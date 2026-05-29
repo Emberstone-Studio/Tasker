@@ -14,12 +14,11 @@ A kanban board for Claude Code agents. Run `/tasker` in Claude Code to create, r
 
 ### 1. Install globally (once)
 
-Download the [latest release](https://github.com/Emberstone-Studio/Tasker/releases) (Tasker.zip) and extract it anywhere (e.g. your Downloads folder). Then:
+Download the [latest release](https://github.com/Emberstone-Studio/Tasker/releases) (Tasker.zip) and extract it anywhere (e.g. your Downloads folder).
 
-- **macOS** — double-click `Install-Mac.command`
-- **Windows** — double-click `Install-Windows.bat`
+Open VS Code and drag **`tasker.vsix`** into the Extensions panel. Alternatively, open the Extensions panel, click **`···`** at the top, choose **Install from VSIX…**, and select the file.
 
-This copies the `Tasker/` folder to `~/.claude/tasker/`, installs four Claude Code skills into `~/.claude/commands/`, and prints the next steps.
+This installs the Tasker files to `~/.claude/tasker/` and adds four Claude Code skills to `~/.claude/commands/`.
 
 ### 2. Reload VS Code
 
@@ -169,8 +168,7 @@ State is persisted in `.tasker/tasks.json` and synced to the browser in real tim
 
 | Location | Purpose |
 |---|---|
-| `Install-Mac.command` | macOS installer — double-click to run |
-| `Install-Windows.bat` | Windows installer — double-click to run |
+| `tasker.vsix` | VS Code extension installer — drag into the Extensions panel |
 | `~/.claude/tasker/` | Master copy installed globally |
 | `~/.claude/commands/tasker*.md` | Global skills, installed once, shared by all projects |
 | `<project>/.tasker/tasker.js` | Per-project server (copied from master on first `/tasker` run) |
@@ -180,4 +178,4 @@ State is persisted in `.tasker/tasks.json` and synced to the browser in real tim
 
 ---
 
-> Patent Pending — US Application 64/076,775 · © 2026 Emberstone Studio
+> Patent Pending — US Application 64/076,775 · © 2026 [Emberstone Studio](https://emberstone-studio.com/)

@@ -178,4 +178,4 @@ State is persisted in `.tasker/tasks.json` and synced to the browser in real tim
 
 ---
 
-> Patent Pending — US Application 64/076,775 · © 2026 Emberstone Studio
+> Patent Pending — US Application 64/076,775 · © 2026 [Emberstone Studio](https://emberstone-studio.com/)
