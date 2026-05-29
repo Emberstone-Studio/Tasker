@@ -102,7 +102,7 @@ Each project gets a stable port derived from its directory path (range 7843–98
 
 ### How the scan loop works
 
-The scan loop runs entirely inside the server process — no ScheduleWakeup, no background Claude Code turns. On startup, the server starts a timer (default 60 seconds, configurable in Settings). On each tick:
+The scan loop runs entirely inside the server process. On startup, the server starts a timer (default 60 seconds, configurable in Settings). On each tick:
 
 1. If paused or no ready tasks, skip
 2. Spawn `claude --print` with a self-contained prompt instructing it to call `/claim-ready`, dispatch sub-agents, and update task state when done
