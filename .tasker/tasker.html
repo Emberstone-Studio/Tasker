@@ -256,6 +256,12 @@
         background: var(--bg-subtle);
       }
 
+      #btn-scan-now:hover {
+        color: var(--accent);
+      }
+      #btn-resume:hover {
+        color: var(--success);
+      }
       #btn-pause:hover {
         color: var(--warning);
       }
@@ -1394,6 +1400,7 @@
         padding: 12px 16px;
         border-top: 1px solid var(--border);
         flex-shrink: 0;
+        background: var(--card-bg);
       }
 
       #chat-panel-input-row .chat-input {
@@ -1564,18 +1571,6 @@
             <span id="watcher-label">Offline — run: /tasker</span>
           </div>
           <button
-            id="btn-resume"
-            class="topbar-btn"
-            type="button"
-            onclick="resumeTasker()"
-            title="Resume scan loop"
-            style="display: none"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-              <polygon points="5 3 19 12 5 21 5 3"/>
-            </svg>
-          </button>
-          <button
             id="btn-scan-now"
             class="topbar-btn"
             type="button"
@@ -1585,6 +1580,18 @@
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
+          </button>
+          <button
+            id="btn-resume"
+            class="topbar-btn"
+            type="button"
+            onclick="resumeTasker()"
+            title="Resume scan loop"
+            style="display: none"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+              <polygon points="5 3 19 12 5 21 5 3"/>
             </svg>
           </button>
           <button
@@ -2237,6 +2244,7 @@
       let countdownSeconds = 0;
 
       function startCountdown(seconds) {
+        if (document.getElementById("watcher-status")?.classList.contains("paused")) return;
         stopCountdown();
         countdownSeconds = seconds;
         updateCountdownDisplay();
@@ -2286,7 +2294,7 @@
         if (resume)
           resume.style.display = cls === "paused" ? "inline-flex" : "none";
         if (scanNow)
-          scanNow.style.display = cls === "connected" ? "inline-flex" : "none";
+          scanNow.style.display = (cls === "connected" || cls === "paused") ? "inline-flex" : "none";
         if (cls !== "connected") stopCountdown();
       }
 
@@ -2342,7 +2350,8 @@
           return;
         }
         if (ev.type === "next_scan") {
-          if (typeof ev.seconds === "number" && ev.seconds > 0)
+          const isPaused = document.getElementById("watcher-status")?.classList.contains("paused");
+          if (!isPaused && typeof ev.seconds === "number" && ev.seconds > 0)
             startCountdown(ev.seconds);
           return;
         }
@@ -3306,8 +3315,21 @@
       }
 
       function triggerScanNow() {
-        fetch(`${WATCHER_URL}/trigger-scan`, { method: "POST" }).catch(() => {});
-        startCountdown(state.scanInterval || 60);
+        const lbl = document.getElementById("watcher-label");
+        if (lbl) lbl.textContent = "Scanning...";
+        fetch(`${WATCHER_URL}/trigger-scan`, { method: "POST" })
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.found === 0) {
+              if (lbl) lbl.textContent = "No ready tasks";
+              setTimeout(() => {
+                const isPaused = document.getElementById("watcher-status")?.classList.contains("paused");
+                if (isPaused) { if (lbl) lbl.textContent = "Paused"; }
+                else startCountdown(state.scanInterval || 60);
+              }, 2000);
+            }
+          })
+          .catch(() => {});
       }
 
       function toggleTheme() {

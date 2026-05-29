@@ -256,9 +256,10 @@ const server = http.createServer((req, res) => {
   }
 
   if (req.method === "POST" && req.url === "/trigger-scan") {
+    const found = appState ? appState.tasks.filter((t) => t.status === "ready").length : 0;
     runScan();
-    scheduleScan();
-    return json(res, 200, { ok: true });
+    if (!paused) scheduleScan();
+    return json(res, 200, { ok: true, found });
   }
 
   if (req.method === "POST" && req.url === "/claim-ready") {
