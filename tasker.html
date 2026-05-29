@@ -2319,7 +2319,9 @@
         }
         if (ev.type === "tasker_state") {
           if (ev.paused) {
-            setWatcherStatus("paused", "");
+            const lbl = document.getElementById("watcher-label");
+            const currentText = lbl ? lbl.textContent : "";
+            setWatcherStatus("paused", currentText === "Paused" ? "Paused" : "");
           } else {
             setWatcherStatus("connected", "Running");
             startCountdown(state.scanInterval || 60);
