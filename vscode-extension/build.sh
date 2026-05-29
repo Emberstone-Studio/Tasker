@@ -21,7 +21,7 @@ cat > "$BUILD/extension.vsixmanifest" << 'EOF'
 <?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011">
   <Metadata>
-    <Identity Language="en-US" Id="tasker" Version="1.2.1" Publisher="emberstone-studio" />
+    <Identity Language="en-US" Id="tasker" Version="1.2.1" Publisher="Emberstone Studio" />
     <DisplayName>Tasker</DisplayName>
     <Description xml:space="preserve">AI task queue manager for Claude Code</Description>
     <Tags/>

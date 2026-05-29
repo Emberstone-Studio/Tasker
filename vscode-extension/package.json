@@ -3,7 +3,7 @@
   "displayName": "Tasker",
   "description": "AI task queue manager for Claude Code",
   "version": "1.2.1",
-  "publisher": "emberstone-studio",
+  "publisher": "Emberstone Studio",
   "engines": { "vscode": "^1.74.0" },
   "activationEvents": ["onStartupFinished"],
   "main": "./extension.js",

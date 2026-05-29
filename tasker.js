@@ -122,6 +122,19 @@ if (!CLAUDE_BIN) {
     } catch {
       CLAUDE_BIN = null;
     }
+    // Fallback: claude installed as a VS Code extension (no global CLI in PATH)
+    if (!CLAUDE_BIN) {
+      try {
+        const vscodeExtDir = path.join(home, ".vscode", "extensions");
+        const entries = fs.readdirSync(vscodeExtDir);
+        for (const entry of entries.sort().reverse()) {
+          if (entry.startsWith("anthropic.claude-code-")) {
+            const bin = path.join(vscodeExtDir, entry, "resources", "native-binary", "claude");
+            if (fs.existsSync(bin)) { CLAUDE_BIN = bin; break; }
+          }
+        }
+      } catch {}
+    }
   }
 }
 
