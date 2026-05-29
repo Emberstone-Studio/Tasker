@@ -10,9 +10,15 @@ const os = require("os");
 const { spawn } = require("child_process");
 
 // Derive a stable port from the project directory so each project gets its own server.
+// Normalize to forward slashes and strip Git-Bash-style /c/ drive prefix so the hash
+// is the same whether invoked from Bash (/c/Users/...) or PowerShell (C:\Users\...).
 function projectPort(dir) {
+  const normalized = dir
+    .replace(/\\/g, "/")
+    .replace(/^\/([a-zA-Z])\//, (_, d) => d.toUpperCase() + ":/");
   let h = 5381;
-  for (let i = 0; i < dir.length; i++) h = ((h << 5) + h) ^ dir.charCodeAt(i);
+  for (let i = 0; i < normalized.length; i++)
+    h = ((h << 5) + h) ^ normalized.charCodeAt(i);
   return 7843 + (Math.abs(h) % 2000);
 }
 
@@ -243,6 +249,29 @@ const server = http.createServer((req, res) => {
     return json(res, 200, { ok: true, paused: false });
   }
 
+  if (req.method === "POST" && req.url === "/claim-ready") {
+    if (!appState) return json(res, 200, { tasks: [], agents: [] });
+    paused = false;
+    broadcast({ type: "tasker_state", paused: false });
+    const now = new Date().toISOString();
+    const claimed = appState.tasks.filter((t) => t.status === "ready");
+    if (claimed.length === 0)
+      return json(res, 200, { tasks: [], agents: appState.agents });
+    claimed.forEach((t) => {
+      t.status = "in_progress";
+      t.updated_at = now;
+      (t.activity = t.activity || []).push({
+        timestamp: now,
+        type: "moved",
+        content: "In progress",
+      });
+    });
+    const saved = JSON.stringify(appState, null, 2);
+    fs.writeFileSync(STATE_FILE, saved, "utf8");
+    broadcast({ type: "state_sync", state: appState });
+    return json(res, 200, { tasks: claimed, agents: appState.agents });
+  }
+
   if (req.method === "GET" && req.url === "/paused") {
     if (!paused) {
       lastHeartbeat = Date.now();
@@ -285,7 +314,7 @@ const server = http.createServer((req, res) => {
   }
 
   if (req.method === "GET" && req.url === "/permissions") {
-    const settingsFile = path.join(__dirname, ".claude", "settings.json");
+    const settingsFile = path.join(__dirname, "..", ".claude", "settings.json");
     try {
       const data = JSON.parse(fs.readFileSync(settingsFile, "utf8"));
       return json(res, 200, {
@@ -302,7 +331,7 @@ const server = http.createServer((req, res) => {
     req.on("end", () => {
       try {
         const body = JSON.parse(raw);
-        const claudeDir = path.join(__dirname, ".claude");
+        const claudeDir = path.join(__dirname, "..", ".claude");
         fs.mkdirSync(claudeDir, { recursive: true });
         const settingsFile = path.join(claudeDir, "settings.json");
         const settings = { permissions: { allow: body.allow || [] } };
@@ -446,7 +475,7 @@ function installSkills() {
   const commandsDir = path.join(os.homedir(), ".claude", "commands");
   const sourceDir = __dirname.replace(/\\/g, "/");
 
-  const portLine = `PORT=$(node Tasker/tasker.js port)`;
+  const portLine = `PORT=$(node .tasker/tasker.js port)\nexport PORT`;
 
   // node-based server health check — works on Windows and Mac without curl
   const nodeCheck = `node -e "require('http').get('http://localhost:'+process.env.PORT+'/',r=>process.exit(0)).on('error',()=>process.exit(1))" PORT=$PORT 2>/dev/null`;
@@ -454,7 +483,7 @@ function installSkills() {
   const startBlock = `\`\`\`bash
 ${portLine}
 ${nodeCheck} || {
-  nohup node Tasker/tasker.js serve > /dev/null 2>&1 &
+  nohup node .tasker/tasker.js serve > /dev/null 2>&1 &
   for i in 1 2 3 4 5 6 7 8 9 10; do
     sleep 1
     ${nodeCheck} && break
@@ -469,113 +498,114 @@ ${nodeCheck} || {
         ? `open "http://localhost:$PORT"`
         : `xdg-open "http://localhost:$PORT"`;
 
-  const resumeBlock = `\`\`\`bash
+  const startAndClaimBlock = `\`\`\`bash
 ${portLine}
-node -e "
-const h=require('http'),r=h.request({hostname:'localhost',port:process.env.PORT,path:'/resume',method:'POST'},res=>{let d='';res.on('data',c=>d+=c);res.on('end',()=>console.log(d))});
-r.on('error',e=>console.log('err:',e.message));r.end();
-" PORT=$PORT
+${nodeCheck} || {
+  nohup node .tasker/tasker.js serve > /dev/null 2>&1 &
+  for i in 1 2 3 4 5 6 7 8 9 10; do
+    sleep 1
+    ${nodeCheck} && break
+  done
+}
+CLAIMED=$(node -e "
+const http=require('http');
+const b='{}';
+const req=http.request({hostname:'localhost',port:process.env.PORT,path:'/claim-ready',method:'POST',headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(b)}},res=>{let d='';res.on('data',c=>d+=c);res.on('end',()=>process.stdout.write(d))});
+req.on('error',e=>process.stdout.write(JSON.stringify({error:e.message,tasks:[],agents:[]})));
+req.write(b);req.end();
+" PORT=$PORT)
+echo "$CLAIMED"
 \`\`\``;
-
-  const queueSteps = `
-## 2. Check the queue
-
-Read \`./Tasker/tasks.json\`. Find all tasks with \`"status": "ready"\`.
-
-If there are no ready tasks, skip to step 5.
-
-## 3. Mark tasks in_progress
-
-For each ready task, read the current \`./Tasker/tasks.json\` immediately before each POST (never use a stale copy), set that task's \`status\` to \`"in_progress"\`, and POST the full patched state to \`http://localhost:$PORT/state\`.
-
-Use \`node -e\` to POST (do not use curl — it is not available in the Claude Code sandbox on Windows):
-
-\`\`\`bash
-node -e "
-const http=require('http'),fs=require('fs');
-const state=JSON.parse(fs.readFileSync('Tasker/tasks.json','utf8'));
-// ... patch state.tasks[i].status = 'in_progress' ...
-const body=JSON.stringify(state);
-const req=http.request({hostname:'localhost',port:process.env.PORT,path:'/state',method:'POST',headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(body)}},res=>{let d='';res.on('data',c=>d+=c);res.on('end',()=>console.log(d))});
-req.on('error',e=>console.log('err:',e.message));req.write(body);req.end();
-" PORT=$PORT
-\`\`\`
-
-## 4. Spawn one Agent per task (in parallel if multiple)
-
-For each task, call the **Agent tool** with:
-
-- **description**: \`"[AgentName]: [task title]"\` — e.g. \`"Coder: Fix login bug"\`
-- **prompt**: A self-contained brief that includes:
-  - The agent's **role** (copy it verbatim from the \`agents\` array in \`./Tasker/tasks.json\`)
-  - The task **title** and **description** (the agent's actual instructions)
-  - Any user comments: activity entries with \`"type": "chat_user"\` from the task's \`activity\` array — include them verbatim under a **User comments** heading so the agent can address them
-  - The working directory: the current working directory
-  - What to return: a concise summary of what was done, including any files changed
-
-The agent should do the real work using its tools (Read, Edit, Write, Bash, etc.).
-
-If multiple tasks are ready, spawn all agents in a **single message** as parallel Agent tool calls.
-
-## 5. Collect results and update state
-
-When each agent finishes, inspect its result **before** updating state:
-
-**If the agent returned an error containing "rate limit", "usage limit", "overloaded", or "capacity":**
-- Reset the task's \`status\` back to \`"ready"\` in \`./Tasker/tasks.json\`
-- POST to \`http://localhost:$PORT/pause-with-message\` using \`node -e\` with body \`{"message": "Paused: Claude usage limit hit while working on \\"<task title>\\". Resume when ready."}\`
-- Stop immediately — do not update task state, do not call ScheduleWakeup.
-
-**Otherwise (normal completion):**
-- Read the current \`./Tasker/tasks.json\` again, then:
-- Set the task's \`status\` to \`"in_review"\`
-- Append to its \`activity\` array: \`{"timestamp": "<ISO timestamp>", "type": "output", "content": "<agent's summary>"}\`
-- POST the full patched state to \`http://localhost:$PORT/state\` using \`node -e\``;
 
   const taskerContent = `---
 description: Start the Tasker server, open the board, and start the scan loop
 ---
 
-## 0. Bootstrap Tasker files if missing
+Output exactly: \`Bootstrapping\`
 
 \`\`\`bash
-mkdir -p Tasker
-cp "${sourceDir}/tasker.js" ./Tasker/tasker.js
-cp "${sourceDir}/tasker.html" ./Tasker/tasker.html
-cp "${sourceDir}/README.md" ./Tasker/README.md
+mkdir -p .tasker
+cp "${sourceDir}/tasker.js" ./.tasker/tasker.js 2>/dev/null || true
+cp "${sourceDir}/tasker.html" ./.tasker/tasker.html 2>/dev/null || true
+cp "${sourceDir}/README.md" ./.tasker/README.md 2>/dev/null || true
 \`\`\`
 
-## 1. Start the server if needed
+Output exactly: \`Starting server and opening task board\`
 
 ${startBlock}
-
-## 2. Open the browser
 
 \`\`\`bash
 ${portLine}
 ${openBrowserCmd}
 \`\`\`
 
-## 3. Start the scan loop
+Output exactly: \`Scanning for tasks\`
 
-Invoke the \`/tasker-scan\` skill.
+${startAndClaimBlock}
+
+Parse the JSON from CLAIMED. If \`tasks\` is non-empty, spawn agents per the rules in /tasker-scan (use pipeline/auto-delegate logic, spawn parallel, update state on completion). Then:
+
+Call ScheduleWakeup with \`delaySeconds=30\` and \`prompt="/tasker-watch"\`. Extract seconds from the result using \`/\\(in (\\d+)s\\)/\`, then:
+
+\`\`\`bash
+${portLine}
+node -e "
+const http=require('http');
+const body=JSON.stringify({seconds: SECONDS});
+const req=http.request({hostname:'localhost',port:process.env.PORT,path:'/next-scan',method:'POST',headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(body)}},res=>{let d='';res.on('data',c=>d+=c);res.on('end',()=>{})});
+req.on('error',()=>{});req.write(body);req.end();
+"
+\`\`\`
+
+Replace SECONDS with the extracted value (default 90). No further output.
 `;
 
   const scanContent = `---
 description: Start the Tasker server if needed, then check the queue and execute ready tasks
 ---
 
+Do not output any text to the user. Execute silently.
+
 You are the Tasker **team lead**. Your job is to manage the queue and delegate work to specialized sub-agents — not to do the work yourself.
 
-## 1. Start the server if needed
+## 1. Start server and claim ready tasks
 
-${startBlock}
+${startAndClaimBlock}
 
-${resumeBlock}
+This also resumes the server if paused. Parse the JSON printed to stdout — it has shape \`{ tasks: [...], agents: [...] }\`:
+- \`tasks\`: tasks that were ready and are now \`in_progress\`
+- \`agents\`: the full agents array (use these for agent roles)
 
-${queueSteps}
+If \`tasks\` is empty, skip to step 3.
 
-## 6. Start the watch loop
+## 2. Spawn one Agent per task (in parallel if multiple)
+
+For each task, call the **Agent tool** with:
+
+- **description**: \`"[AgentName]: [task title]"\` — e.g. \`"Coder: Fix login bug"\`
+- **prompt**: A self-contained brief that includes:
+  - The agent's **role** (copy it verbatim from the \`agents\` array returned above)
+  - The task **title** and **description** (the agent's actual instructions)
+  - Any user comments: activity entries with \`"type": "chat_user"\` from the task's \`activity\` array — include them verbatim under a **User comments** heading
+  - The working directory: the current working directory
+  - What to return: a concise summary of what was done, including any files changed
+
+For pipeline tasks use \`pipeline[pipeline_step]\` as the effective agent_id. For \`agent_id: null\`, pick the best agent based on task content (writing/docs → Writer, reviewing/auditing → Reviewer, research → Researcher, default → Coder).
+
+If multiple tasks are ready, spawn all agents in a **single message** as parallel Agent tool calls.
+
+When each agent finishes, inspect its result **before** updating state:
+
+**If the agent returned an error containing "rate limit", "usage limit", "overloaded", or "capacity":**
+- Reset the task's \`status\` back to \`"ready"\` in \`./.tasker/tasks.json\`
+- POST to \`http://localhost:$PORT/pause-with-message\` using \`node -e\` with body \`{"message": "Paused: Claude usage limit hit while working on \\"<task title>\\". Resume when ready."}\`
+- Stop immediately — do not update task state, do not call ScheduleWakeup.
+
+**Otherwise (normal completion):**
+- Read the current \`./.tasker/tasks.json\`, then set the task's \`status\` to \`"in_review"\` and append to its \`activity\` array: \`{"timestamp": "<ISO timestamp>", "type": "output", "content": "<agent's summary>"}\`
+- POST the full patched state to \`http://localhost:$PORT/state\` using \`node -e\`
+
+## 3. Start the watch loop
 
 Call ScheduleWakeup with \`delaySeconds=30\` and \`prompt="/tasker-watch"\`. The result text looks like \`"Next wakeup scheduled for ... (in 101s)"\`. Extract the seconds using \`/\\(in (\\d+)s\\)/\`, then POST:
 
@@ -597,6 +627,8 @@ Replace X with the actual seconds extracted above. If you cannot parse the numbe
   const watchContent = `---
 description: Check server state, then invoke /tasker-scan if server is running and not paused
 ---
+
+Do not output any text to the user. Execute silently.
 
 ## 1. Check pause state
 
@@ -660,13 +692,14 @@ r.on('error',e=>console.log('err:',e.message));r.end();
   } catch (err) {
     console.warn(`[tasker] Could not install skills: ${err.message}`);
   }
+
 }
 
 // ─── Start ────────────────────────────────────────────────────────
 
 if (process.argv[2] === "port") {
   // NOTE: Do NOT call installSkills() here — `port` fires on every scan cycle
-  // (PORT=$(node Tasker/tasker.js port)) and would overwrite skill files constantly.
+  // (PORT=$(node .tasker/tasker.js port)) and would overwrite skill files constantly.
   console.log(PORT);
   process.exit(0);
 } else if (process.argv[2] === "serve") {
