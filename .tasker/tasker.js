@@ -128,7 +128,7 @@ if (!CLAUDE_BIN) {
 // ─── State ────────────────────────────────────────────────────────
 
 let appState = null;
-let paused = false;
+let paused = true;
 let lastHeartbeat = null;
 let pendingRepause = false;
 try {
@@ -885,7 +885,7 @@ if (process.argv[2] === "port") {
   server.listen(PORT, "127.0.0.1", () => {
     console.log(`[tasker] Running at http://localhost:${PORT}`);
     console.log(`[tasker] Press Ctrl+C to stop.`);
-    scheduleScan();
+    if (!paused) scheduleScan();
     checkForUpdate();
   });
   process.on("SIGINT", () => {
