@@ -716,6 +716,7 @@ r.on('error',e=>console.log('err:',e.message));r.end();
     console.log(`[tasker] Skill installed: /tasker-pause`);
     fs.writeFileSync(path.join(commandsDir, "tasker-stop.md"), stopContent, "utf8");
     console.log(`[tasker] Skill installed: /tasker-stop`);
+    try { fs.unlinkSync(path.join(commandsDir, "tasker-watch.md")); } catch (e) {}
   } catch (err) {
     console.warn(`[tasker] Could not install skills: ${err.message}`);
   }
