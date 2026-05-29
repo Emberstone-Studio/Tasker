@@ -19,7 +19,7 @@ Download the [latest release](https://github.com/Emberstone-Studio/Tasker/releas
 - **macOS** — double-click `Install-Mac.command`
 - **Windows** — double-click `Install-Windows.bat`
 
-This copies the `.tasker/` folder to `~/.claude/tasker/`, installs four Claude Code skills into `~/.claude/commands/`, and prints the next steps.
+This copies the `Tasker/` folder to `~/.claude/tasker/`, installs four Claude Code skills into `~/.claude/commands/`, and prints the next steps.
 
 ### 2. Reload VS Code
 
@@ -27,7 +27,7 @@ Open the command palette (`Cmd+Shift+P` on macOS, `Ctrl+Shift+P` on Windows/Linu
 
 ### 3. Use in any project
 
-Open a project in VS Code and run `/tasker` in Claude Code. On the first run in a new project it creates a `.tasker/` directory and copies `tasker.js`, `tasker.html`, and `README.md` into it, then starts the server, opens the board, and begins the scan loop. Nothing to copy or unzip per project.
+Open a project in VS Code and run `/tasker` in Claude Code. On the first run in a new project it creates a `.tasker/` directory and copies `tasker.js`, `tasker.html`, and `README.md` into it, then starts the server and opens the board. The server starts **paused** — press **▶** to start the scan loop or **⚡** to run a one-off scan.
 
 ---
 
@@ -57,9 +57,10 @@ Each task has:
 ### Workflow
 
 1. Create a task in **Backlog** or **Ready**
-2. Run `/tasker` in Claude Code — the server starts and the scan loop picks up ready tasks automatically
-3. Tasks move to **In Review** when done, with output in the activity log
-4. Review the output, then click **Move to Done**
+2. Run `/tasker` in Claude Code to start the server and open the board
+3. Press **▶** to start the scan loop, or **⚡** to run a one-off scan immediately
+4. Tasks move to **In Review** when done, with output in the activity log
+5. Review the output, then click **Move to Done**
 
 ### Comments
 
@@ -102,13 +103,13 @@ Each project gets a stable port derived from its directory path (range 7843–98
 
 ### How the scan loop works
 
-The scan loop runs entirely inside the server process. On startup, the server starts a timer (default 60 seconds, configurable in Settings). On each tick:
+The scan loop runs entirely inside the server process. The server starts **paused** — press ▶ to begin. Once running, it checks for ready tasks on a configurable interval (default 60 seconds). On each tick:
 
-1. If paused or no ready tasks, skip
+1. If no ready tasks, skip
 2. Spawn `claude --print` with a self-contained prompt instructing it to call `/claim-ready`, dispatch sub-agents, and update task state when done
 3. Reschedule the timer
 
-The loop is completely invisible — you will never see a background turn fire in Claude Code.
+The loop is completely invisible — you will never see a background turn fire in Claude Code. When tasks are picked up, a notification appears in the status bar, the Logs tab, and the Chat panel.
 
 ### Team lead + agent pattern
 
@@ -124,14 +125,20 @@ If an agent hits a rate limit or usage cap, the team lead resets the task back t
 
 ## Pause and resume
 
-The top bar shows the current status and a countdown to the next scan. Controls available when the server is running:
+The server starts paused. The top bar shows the current status and a countdown to the next scan. Controls available when the server is running:
 
-- **⚡ Scan Now** — immediately checks for ready tasks and processes them; visible when running or paused
-- **▶ Resume** — restarts the scan timer from the beginning; visible when paused
+- **⚡ Scan Now** — immediately checks for ready tasks and processes them; visible when running or paused. When clicked while paused, runs a one-off scan and returns to paused when done.
+- **▶ Resume** — starts the automatic scan timer; visible when paused
 - **⏸ Pause** — stops the scan timer; visible when running
 - **⏻ Stop** — shuts down the server entirely
 
-When paused, the timer is fully cleared. Clicking Resume or Scan Now are the two ways to act while paused — Resume restarts the automatic loop, Scan Now runs a one-off check without restarting the timer.
+## Scan feedback
+
+When tasks are picked up, Tasker notifies you in three places:
+
+- **Status bar** — briefly shows the task name and assigned agent, then returns to the countdown
+- **Logs tab** — adds a persistent "Picked up: Task → Agent" entry
+- **Chat panel** — posts a message with the task title, description, and agent assignment
 
 ## Chat panel
 
@@ -145,6 +152,7 @@ Conversations persist within the session. Each message is sent with a session ID
 
 Open the **Settings** panel (⚙) to configure:
 
+- **Updates** — shown when a newer version is available; click Install to update automatically, or download manually if the silent install fails
 - **Scan interval** — how often the loop checks for ready tasks (30s / 1m / 2m / 5m / 10m)
 - **Dark/light mode** — preference saved in `localStorage`
 - **Permissions** — which tool categories sub-agents can use without a permission prompt; written to `.claude/settings.json`
