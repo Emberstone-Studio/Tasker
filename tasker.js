@@ -262,8 +262,21 @@ const server = http.createServer((req, res) => {
 
   if (req.method === "POST" && req.url === "/trigger-scan") {
     const found = appState ? appState.tasks.filter((t) => t.status === "ready").length : 0;
-    runScan();
-    if (!paused) scheduleScan();
+    if (found > 0) {
+      const wasPaused = paused;
+      paused = false;
+      if (scanTimer) clearTimeout(scanTimer);
+      scanTimer = setTimeout(() => {
+        runScan();
+        if (wasPaused) {
+          paused = true;
+          broadcast({ type: "tasker_state", paused: true });
+          scanTimer = null;
+        } else {
+          scheduleScan();
+        }
+      }, 0);
+    }
     return json(res, 200, { ok: true, found });
   }
 
@@ -821,8 +834,9 @@ function runScan() {
   const child = spawn(CLAUDE_BIN, ["--print", "-p", buildScanPrompt()], {
     cwd: PROJECT_DIR,
     shell: CLAUDE_SHELL,
-    stdio: "ignore",
+    stdio: ["pipe", "ignore", "ignore"],
   });
+  child.stdin.end();
   child.on("error", (err) =>
     console.error("[tasker] scan error:", err.message)
   );
