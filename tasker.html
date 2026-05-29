@@ -2392,7 +2392,13 @@
           ev.pickups.forEach(p => {
             addLog(p.taskId, `Picked up: ${p.title} → ${p.agent}`);
           });
-          _chatAppendMessage("assistant", lines.map(l => `↑ ${l}`).join("\n"));
+          const chatLines = [`Picked up ${ev.pickups.length} task${ev.pickups.length > 1 ? "s" : ""}:`];
+          ev.pickups.forEach(p => {
+            const task = state.tasks.find(t => t.id === p.taskId);
+            chatLines.push(`\n**${p.title}** → ${p.agent}`);
+            if (task && task.description) chatLines.push(task.description.slice(0, 120) + (task.description.length > 120 ? "…" : ""));
+          });
+          _chatAppendMessage("assistant", chatLines.join("\n"));
           return;
         }
         if (ev.type === "usage_cap") {

@@ -282,8 +282,6 @@ const server = http.createServer((req, res) => {
 
   if (req.method === "POST" && req.url === "/claim-ready") {
     if (!appState) return json(res, 200, { tasks: [], agents: [] });
-    paused = false;
-    broadcast({ type: "tasker_state", paused: false });
     const now = new Date().toISOString();
     const claimed = appState.tasks.filter((t) => t.status === "ready");
     if (claimed.length === 0)
