@@ -1564,6 +1564,30 @@
             <span id="watcher-label">Offline — run: /tasker</span>
           </div>
           <button
+            id="btn-resume"
+            class="topbar-btn"
+            type="button"
+            onclick="resumeTasker()"
+            title="Resume scan loop"
+            style="display: none"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+              <polygon points="5 3 19 12 5 21 5 3"/>
+            </svg>
+          </button>
+          <button
+            id="btn-scan-now"
+            class="topbar-btn"
+            type="button"
+            onclick="triggerScanNow()"
+            title="Scan now"
+            style="display: none"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
+          </button>
+          <button
             id="btn-pause"
             class="topbar-btn"
             type="button"
@@ -1847,6 +1871,19 @@
           </button>
         </div>
         <div class="modal-body">
+          <div class="settings-section">
+            <div class="settings-section-title">Scan</div>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+              <label style="color:var(--text-secondary);font-size:13px">Scan every</label>
+              <select id="scan-interval-select" onchange="saveScanInterval()" class="form-input" style="width:auto">
+                <option value="30">30 seconds</option>
+                <option value="60">1 minute</option>
+                <option value="120">2 minutes</option>
+                <option value="300">5 minutes</option>
+                <option value="600">10 minutes</option>
+              </select>
+            </div>
+          </div>
           <div class="settings-section">
             <div class="settings-section-title">Appearance</div>
             <div
@@ -2144,7 +2181,7 @@
         const el = document.getElementById("watcher-status");
         if (!el.classList.contains("connected")) return;
         fetch(`${WATCHER_URL}/pause`, { method: "POST" }).catch(() => {});
-        setWatcherStatus("paused", "Paused — run: /tasker-scan");
+        setWatcherStatus("paused", "Paused");
       }
 
       function showUsageCapBanner(message) {
@@ -2164,7 +2201,7 @@
         dismissUsageCapBanner();
         fetch(`${WATCHER_URL}/resume`, { method: "POST" }).catch(() => {});
         setWatcherStatus("connected", "Running");
-        startCountdown(60);
+        startCountdown(state.scanInterval || 60);
       }
 
       function connectWatcher() {
@@ -2238,12 +2275,18 @@
         const lbl = document.getElementById("watcher-label");
         const stop = document.getElementById("btn-stop");
         const pause = document.getElementById("btn-pause");
+        const resume = document.getElementById("btn-resume");
+        const scanNow = document.getElementById("btn-scan-now");
         if (el) el.className = cls;
         if (lbl) lbl.textContent = label;
         if (stop)
           stop.style.display = cls === "disconnected" ? "none" : "inline-flex";
         if (pause)
           pause.style.display = cls === "connected" ? "inline-flex" : "none";
+        if (resume)
+          resume.style.display = cls === "paused" ? "inline-flex" : "none";
+        if (scanNow)
+          scanNow.style.display = cls === "connected" ? "inline-flex" : "none";
         if (cls !== "connected") stopCountdown();
       }
 
@@ -2271,13 +2314,13 @@
             persistState(); // bootstrap tasks.json on first run
           }
           if (ev.paused) {
-            setWatcherStatus("paused", "Paused — run: /tasker-scan");
+            setWatcherStatus("paused", "Paused");
           } else {
             setWatcherStatus("connected", "Running");
             const elapsed = ev.lastHeartbeat
               ? Math.floor((Date.now() - ev.lastHeartbeat) / 1000)
               : 0;
-            startCountdown(Math.max(1, 60 - elapsed));
+            startCountdown(Math.max(1, (state.scanInterval || 60) - elapsed));
           }
           return;
         }
@@ -2287,10 +2330,10 @@
         }
         if (ev.type === "tasker_state") {
           if (ev.paused) {
-            setWatcherStatus("paused", "Paused — run: /tasker-scan");
+            setWatcherStatus("paused", "Paused");
           } else {
             setWatcherStatus("connected", "Running");
-            startCountdown(60);
+            startCountdown(state.scanInterval || 60);
           }
           return;
         }
@@ -3246,7 +3289,25 @@
       function openSettings() {
         updateThemeButton();
         loadPermissions();
+        const sel = document.getElementById("scan-interval-select");
+        if (sel) sel.value = String(state.scanInterval || 60);
         openModal("settings-modal");
+      }
+
+      function saveScanInterval() {
+        const val = parseInt(document.getElementById("scan-interval-select").value);
+        if (!Number.isFinite(val) || val <= 0) return;
+        state.scanInterval = val;
+        persistState();
+      }
+
+      function resumeTasker() {
+        fetch(`${WATCHER_URL}/resume`, { method: "POST" }).catch(() => {});
+      }
+
+      function triggerScanNow() {
+        fetch(`${WATCHER_URL}/trigger-scan`, { method: "POST" }).catch(() => {});
+        startCountdown(state.scanInterval || 60);
       }
 
       function toggleTheme() {

@@ -27,10 +27,12 @@ const PORT = process.env.TASKER_PORT
   : projectPort(__dirname);
 const HTML_FILE = path.join(__dirname, "tasker.html");
 const STATE_FILE = path.join(__dirname, "tasks.json");
-const PROJECT_NAME = path.basename(path.dirname(__dirname));
+const PROJECT_DIR = path.dirname(__dirname);
+const PROJECT_NAME = path.basename(PROJECT_DIR);
 
 const DEFAULT_STATE = {
   tasks: [],
+  scanInterval: 60,
   agents: [
     {
       id: "agent-researcher-default",
@@ -210,9 +212,11 @@ const server = http.createServer((req, res) => {
     req.on("data", (chunk) => (raw += chunk));
     req.on("end", () => {
       try {
+        const prevInterval = appState && appState.scanInterval;
         appState = JSON.parse(raw);
         fs.writeFileSync(STATE_FILE, raw, "utf8");
         broadcast({ type: "state_sync", state: appState });
+        if (appState.scanInterval !== prevInterval) scheduleScan();
         json(res, 200, { ok: true });
       } catch (err) {
         json(res, 400, { error: err.message });
@@ -223,6 +227,7 @@ const server = http.createServer((req, res) => {
 
   if (req.method === "POST" && req.url === "/pause") {
     paused = true;
+    if (scanTimer) { clearTimeout(scanTimer); scanTimer = null; }
     broadcast({ type: "tasker_state", paused: true });
     return json(res, 200, { ok: true, paused: true });
   }
@@ -246,7 +251,14 @@ const server = http.createServer((req, res) => {
   if (req.method === "POST" && req.url === "/resume") {
     paused = false;
     broadcast({ type: "tasker_state", paused: false });
+    scheduleScan();
     return json(res, 200, { ok: true, paused: false });
+  }
+
+  if (req.method === "POST" && req.url === "/trigger-scan") {
+    runScan();
+    scheduleScan();
+    return json(res, 200, { ok: true });
   }
 
   if (req.method === "POST" && req.url === "/claim-ready") {
@@ -543,21 +555,7 @@ Output exactly: \`Scanning for tasks\`
 
 ${startAndClaimBlock}
 
-Parse the JSON from CLAIMED. If \`tasks\` is non-empty, spawn agents per the rules in /tasker-scan (use pipeline/auto-delegate logic, spawn parallel, update state on completion). Then:
-
-Call ScheduleWakeup with \`delaySeconds=30\` and \`prompt="/tasker-watch"\`. Extract seconds from the result using \`/\\(in (\\d+)s\\)/\`, then:
-
-\`\`\`bash
-${portLine}
-node -e "
-const http=require('http');
-const body=JSON.stringify({seconds: SECONDS});
-const req=http.request({hostname:'localhost',port:process.env.PORT,path:'/next-scan',method:'POST',headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(body)}},res=>{let d='';res.on('data',c=>d+=c);res.on('end',()=>{})});
-req.on('error',()=>{});req.write(body);req.end();
-"
-\`\`\`
-
-Replace SECONDS with the extracted value (default 90). No further output.
+Parse the JSON from CLAIMED. If \`tasks\` is non-empty, spawn agents per the rules in /tasker-scan (pipeline/auto-delegate logic, parallel, update state on completion). The server scan loop runs automatically — no further output.
 `;
 
   const scanContent = `---
@@ -605,20 +603,7 @@ When each agent finishes, inspect its result **before** updating state:
 - Read the current \`./.tasker/tasks.json\`, then set the task's \`status\` to \`"in_review"\` and append to its \`activity\` array: \`{"timestamp": "<ISO timestamp>", "type": "output", "content": "<agent's summary>"}\`
 - POST the full patched state to \`http://localhost:$PORT/state\` using \`node -e\`
 
-## 3. Start the watch loop
-
-Call ScheduleWakeup with \`delaySeconds=30\` and \`prompt="/tasker-watch"\`. The result text looks like \`"Next wakeup scheduled for ... (in 101s)"\`. Extract the seconds using \`/\\(in (\\d+)s\\)/\`, then POST:
-
-\`\`\`bash
-node -e "
-const http=require('http');
-const body=JSON.stringify({seconds: X});
-const req=http.request({hostname:'localhost',port:process.env.PORT,path:'/next-scan',method:'POST',headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(body)}},res=>{let d='';res.on('data',c=>d+=c);res.on('end',()=>console.log(d))});
-req.on('error',e=>console.log('err:',e.message));req.write(body);req.end();
-" PORT=$PORT
-\`\`\`
-
-Replace X with the actual seconds extracted above. If you cannot parse the number, use 90.
+The server scan loop restarts automatically — no ScheduleWakeup needed.
 
 ---
 
@@ -695,6 +680,59 @@ r.on('error',e=>console.log('err:',e.message));r.end();
 
 }
 
+// ─── Server-side scan loop ────────────────────────────────────────
+
+let scanTimer = null;
+
+function buildScanPrompt() {
+  const stateFile = STATE_FILE.replace(/\\/g, "/");
+  const projectDir = PROJECT_DIR.replace(/\\/g, "/");
+  const prompt =
+    `You are a Tasker scan agent. Do not output anything to the user.\n` +
+    `Project: ${projectDir} | Port: ${PORT}\n\n` +
+    `1. POST {} to http://localhost:${PORT}/claim-ready using node -e. ` +
+    `Parse response {tasks,agents}. If tasks is empty, stop.\n` +
+    `2. For each task call the Agent tool (parallel if multiple). ` +
+    `description="[AgentName]: [title]". ` +
+    `Effective agent: use pipeline[pipeline_step] if pipeline exists; ` +
+    `auto-pick if agent_id null (writing/docs->Writer, reviewing->Reviewer, research->Researcher, else Coder); ` +
+    `else use agent_id. ` +
+    `Prompt must include: agent role verbatim, task title+description, ` +
+    `chat_user activity entries as User comments, cwd ${projectDir}, return a concise summary.\n` +
+    `3. After all agents complete: if any error contains "rate limit"/"usage limit"/"overloaded"/"capacity", ` +
+    `reset that task's status to "ready" in ${stateFile}, ` +
+    `POST {"message":"Paused: usage limit hit on \\"[title]\\""} to http://localhost:${PORT}/pause-with-message, stop. ` +
+    `Otherwise: read ${stateFile}, set status "in_review", ` +
+    `append {"timestamp":"<ISO>","type":"output","content":"<summary>"} to activity, ` +
+    `POST full state to http://localhost:${PORT}/state. All HTTP via node -e.`;
+  return CLAUDE_SHELL ? prompt.replace(/[\r\n]+/g, " ") : prompt;
+}
+
+function runScan() {
+  if (paused || !appState || !CLAUDE_BIN) return;
+  if (!appState.tasks.some((t) => t.status === "ready")) return;
+  lastHeartbeat = Date.now();
+  broadcast({ type: "scan_heartbeat", lastHeartbeat });
+  const child = spawn(CLAUDE_BIN, ["--print", "-p", buildScanPrompt()], {
+    cwd: PROJECT_DIR,
+    shell: CLAUDE_SHELL,
+    stdio: "ignore",
+  });
+  child.on("error", (err) =>
+    console.error("[tasker] scan error:", err.message)
+  );
+}
+
+function scheduleScan() {
+  if (scanTimer) clearTimeout(scanTimer);
+  const secs = (appState && appState.scanInterval) || 60;
+  broadcast({ type: "next_scan", seconds: secs });
+  scanTimer = setTimeout(() => {
+    runScan();
+    scheduleScan();
+  }, secs * 1000);
+}
+
 // ─── Start ────────────────────────────────────────────────────────
 
 if (process.argv[2] === "port") {
@@ -706,11 +744,14 @@ if (process.argv[2] === "port") {
   installSkills();
   if (!appState) {
     appState = DEFAULT_STATE;
-    fs.writeFileSync(STATE_FILE, JSON.stringify(appState, null, 2), "utf8");
+  } else if (!appState.scanInterval) {
+    appState.scanInterval = 60;
   }
+  fs.writeFileSync(STATE_FILE, JSON.stringify(appState, null, 2), "utf8");
   server.listen(PORT, "127.0.0.1", () => {
     console.log(`[tasker] Running at http://localhost:${PORT}`);
     console.log(`[tasker] Press Ctrl+C to stop.`);
+    scheduleScan();
   });
   process.on("SIGINT", () => {
     for (const res of clients) {
