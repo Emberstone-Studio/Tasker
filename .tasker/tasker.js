@@ -300,6 +300,13 @@ const server = http.createServer((req, res) => {
     const saved = JSON.stringify(appState, null, 2);
     fs.writeFileSync(STATE_FILE, saved, "utf8");
     broadcast({ type: "state_sync", state: appState });
+    const pickups = claimed.map((t) => {
+      const effectiveId = (t.pipeline && t.pipeline.length > 0)
+        ? t.pipeline[t.pipeline_step || 0] : t.agent_id;
+      const agent = (appState.agents || []).find((a) => a.id === effectiveId);
+      return { taskId: t.id, title: t.title, agent: agent ? agent.name : "Auto" };
+    });
+    broadcast({ type: "scan_claimed", pickups });
     return json(res, 200, { tasks: claimed, agents: appState.agents });
   }
 

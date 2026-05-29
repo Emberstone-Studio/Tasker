@@ -2378,6 +2378,23 @@
           handleUpdateEvent(ev);
           return;
         }
+        if (ev.type === "scan_claimed" && ev.pickups && ev.pickups.length > 0) {
+          const lbl = document.getElementById("watcher-label");
+          const lines = ev.pickups.map(p => `${p.title} → ${p.agent}`);
+          if (lbl) {
+            lbl.textContent = lines.join(", ");
+            setTimeout(() => {
+              const isPaused = document.getElementById("watcher-status")?.classList.contains("paused");
+              if (isPaused) { lbl.textContent = "Paused"; }
+              else if (lbl.textContent === lines.join(", ")) startCountdown(state.scanInterval || 60);
+            }, 4000);
+          }
+          ev.pickups.forEach(p => {
+            addLog(p.taskId, `Picked up: ${p.title} → ${p.agent}`);
+          });
+          _chatAppendMessage("assistant", lines.map(l => `↑ ${l}`).join("\n"));
+          return;
+        }
         if (ev.type === "usage_cap") {
           showUsageCapBanner(ev.message || "Usage limit reached.");
           return;
