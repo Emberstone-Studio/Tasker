@@ -2342,6 +2342,13 @@
         }
         if (ev.type === "state_sync") {
           applyState(ev.state);
+          const lbl = document.getElementById("watcher-label");
+          const statusEl = document.getElementById("watcher-status");
+          const isScanning = lbl && lbl.textContent === "Scanning...";
+          const hasInProgress = ev.state && ev.state.tasks && ev.state.tasks.some(t => t.status === "in_progress");
+          if (isScanning && !hasInProgress && statusEl && statusEl.classList.contains("connected")) {
+            startCountdown(state.scanInterval || 60);
+          }
           return;
         }
         if (ev.type === "tasker_state") {
