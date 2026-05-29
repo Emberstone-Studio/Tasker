@@ -4,10 +4,15 @@
 "use strict";
 
 const http = require("http");
+const https = require("https");
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
 const { spawn } = require("child_process");
+
+const VERSION = "1.0.0";
+const GITHUB_REPO = "Emberstone-Studio/Tasker";
+const INSTALL_DIR = path.join(os.homedir(), ".claude", "tasker");
 
 // Derive a stable port from the project directory so each project gets its own server.
 // Normalize to forward slashes and strip Git-Bash-style /c/ drive prefix so the hash
@@ -64,7 +69,7 @@ const DEFAULT_STATE = {
 
 // ─── Claude binary resolution ─────────────────────────────────────
 
-const { execSync } = require("child_process");
+const { execSync, exec } = require("child_process");
 let CLAUDE_BIN = process.env.CLAUDE_BIN || null;
 let CLAUDE_SHELL = false;
 
@@ -309,6 +314,24 @@ const server = http.createServer((req, res) => {
       broadcast({ type: "next_scan", seconds });
       return json(res, 200, { ok: true });
     });
+    return;
+  }
+
+  if (req.method === "GET" && req.url === "/version") {
+    return json(res, 200, {
+      version: VERSION,
+      latestVersion: latestRelease ? latestRelease.tag_name : null,
+      updateAvailable: !!latestRelease,
+      downloadUrl: latestRelease
+        ? (latestRelease.assets || []).find((a) => a.name === "Tasker.zip")?.browser_download_url || latestRelease.html_url
+        : null,
+    });
+  }
+
+  if (req.method === "POST" && req.url === "/update") {
+    if (!latestRelease) return json(res, 400, { error: "No update available" });
+    json(res, 200, { ok: true });
+    setImmediate(performUpdate);
     return;
   }
 
@@ -654,6 +677,114 @@ r.on('error',e=>console.log('err:',e.message));r.end();
 
 }
 
+// ─── Update ───────────────────────────────────────────────────────
+
+let latestRelease = null;
+
+function parseVersion(v) {
+  return String(v).replace(/^v/, "").split(".").map(Number);
+}
+
+function isNewer(remote, local) {
+  const r = parseVersion(remote);
+  const l = parseVersion(local);
+  for (let i = 0; i < 3; i++) {
+    if ((r[i] || 0) > (l[i] || 0)) return true;
+    if ((r[i] || 0) < (l[i] || 0)) return false;
+  }
+  return false;
+}
+
+function checkForUpdate() {
+  const opts = {
+    hostname: "api.github.com",
+    path: `/repos/${GITHUB_REPO}/releases/latest`,
+    headers: { "User-Agent": `Tasker/${VERSION}` },
+  };
+  https.get(opts, (res) => {
+    let data = "";
+    res.on("data", (c) => (data += c));
+    res.on("end", () => {
+      try {
+        const release = JSON.parse(data);
+        if (release.tag_name && isNewer(release.tag_name, VERSION)) {
+          latestRelease = release;
+          broadcast({ type: "update_available", version: release.tag_name });
+        }
+      } catch {}
+    });
+  }).on("error", () => {});
+}
+
+function downloadFile(url, dest, cb) {
+  const mod = url.startsWith("https") ? https : http;
+  mod.get(url, { headers: { "User-Agent": `Tasker/${VERSION}` } }, (res) => {
+    if (res.statusCode === 301 || res.statusCode === 302)
+      return downloadFile(res.headers.location, dest, cb);
+    if (res.statusCode !== 200) return cb(new Error(`HTTP ${res.statusCode}`));
+    const f = fs.createWriteStream(dest);
+    res.pipe(f);
+    f.on("finish", () => f.close(cb));
+    f.on("error", (e) => { fs.unlink(dest, () => {}); cb(e); });
+  }).on("error", cb);
+}
+
+function performUpdate() {
+  const asset = (latestRelease.assets || []).find((a) => a.name === "Tasker.zip");
+  if (!asset) throw new Error("No Tasker.zip in release assets");
+
+  const tmpDir = path.join(os.tmpdir(), `tasker-update-${Date.now()}`);
+  const zipPath = path.join(tmpDir, "Tasker.zip");
+  const extractDir = path.join(tmpDir, "extracted");
+  fs.mkdirSync(tmpDir, { recursive: true });
+
+  broadcast({ type: "update_progress", step: "downloading" });
+
+  downloadFile(asset.browser_download_url, zipPath, (err) => {
+    if (err) return fail(err, tmpDir, asset.browser_download_url);
+
+    broadcast({ type: "update_progress", step: "extracting" });
+    fs.mkdirSync(extractDir, { recursive: true });
+
+    const extractCmd = process.platform === "win32"
+      ? `powershell -NoProfile -NonInteractive -Command "Expand-Archive -LiteralPath '${zipPath}' -DestinationPath '${extractDir}' -Force"`
+      : `unzip -o "${zipPath}" -d "${extractDir}"`;
+
+    exec(extractCmd, (err) => {
+      if (err) return fail(err, tmpDir, asset.browser_download_url);
+
+      broadcast({ type: "update_progress", step: "installing" });
+
+      try {
+        const srcDir = path.join(extractDir, "Tasker");
+        for (const dir of [INSTALL_DIR, __dirname]) {
+          fs.mkdirSync(dir, { recursive: true });
+          for (const file of fs.readdirSync(srcDir))
+            fs.copyFileSync(path.join(srcDir, file), path.join(dir, file));
+        }
+      } catch (e) {
+        return fail(e, tmpDir, asset.browser_download_url);
+      }
+
+      try { fs.rmSync(tmpDir, { recursive: true }); } catch {}
+      broadcast({ type: "update_complete", version: latestRelease.tag_name });
+
+      const next = spawn(process.execPath, [__filename, "serve"], {
+        detached: true, stdio: "ignore", cwd: process.cwd(),
+        env: { ...process.env, TASKER_PORT: String(PORT) },
+      });
+      next.unref();
+      setTimeout(() => process.exit(0), 800);
+    });
+  });
+}
+
+function fail(err, tmpDir, downloadUrl) {
+  try { fs.rmSync(tmpDir, { recursive: true }); } catch {}
+  console.error("[tasker] update failed:", err.message);
+  broadcast({ type: "update_failed", downloadUrl });
+}
+
 // ─── Server-side scan loop ────────────────────────────────────────
 
 let scanTimer = null;
@@ -726,6 +857,7 @@ if (process.argv[2] === "port") {
     console.log(`[tasker] Running at http://localhost:${PORT}`);
     console.log(`[tasker] Press Ctrl+C to stop.`);
     scheduleScan();
+    checkForUpdate();
   });
   process.on("SIGINT", () => {
     for (const res of clients) {

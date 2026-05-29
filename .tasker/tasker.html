@@ -1878,6 +1878,14 @@
           </button>
         </div>
         <div class="modal-body">
+          <div class="settings-section" id="update-section" style="display:none">
+            <div class="settings-section-title">Updates</div>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              <span id="update-version-label" style="color:var(--text-secondary);font-size:13px;font-family:var(--font-mono)"></span>
+              <span id="update-status-label" style="font-size:12px;color:var(--text-tertiary)"></span>
+              <button id="btn-install-update" type="button" class="btn-primary" onclick="installUpdate()" style="display:none;padding:4px 10px;font-size:12px">Install</button>
+            </div>
+          </div>
           <div class="settings-section">
             <div class="settings-section-title">Scan</div>
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
@@ -2357,6 +2365,10 @@
         }
         if (ev.type === "shutdown") {
           setWatcherStatus("disconnected", "Offline — run: /tasker");
+          return;
+        }
+        if (["update_available","update_progress","update_complete","update_failed"].includes(ev.type)) {
+          handleUpdateEvent(ev);
           return;
         }
         if (ev.type === "usage_cap") {
@@ -3300,7 +3312,68 @@
         loadPermissions();
         const sel = document.getElementById("scan-interval-select");
         if (sel) sel.value = String(state.scanInterval || 60);
+        loadUpdateStatus();
         openModal("settings-modal");
+      }
+
+      async function loadUpdateStatus() {
+        try {
+          const r = await fetch(`${WATCHER_URL}/version`);
+          const d = await r.json();
+          const section = document.getElementById("update-section");
+          const versionLabel = document.getElementById("update-version-label");
+          const statusLabel = document.getElementById("update-status-label");
+          const btn = document.getElementById("btn-install-update");
+          if (d.updateAvailable) {
+            section.style.display = "";
+            versionLabel.textContent = `v${d.version} → ${d.latestVersion}`;
+            statusLabel.textContent = "Update available";
+            btn.style.display = "";
+            btn.dataset.downloadUrl = d.downloadUrl || "";
+          } else {
+            section.style.display = "none";
+          }
+        } catch {}
+      }
+
+      async function installUpdate() {
+        const btn = document.getElementById("btn-install-update");
+        const statusLabel = document.getElementById("update-status-label");
+        btn.disabled = true;
+        statusLabel.textContent = "Downloading…";
+        try {
+          await fetch(`${WATCHER_URL}/update`, { method: "POST" });
+        } catch {
+          statusLabel.textContent = "Starting update…";
+        }
+      }
+
+      function handleUpdateEvent(ev) {
+        const statusLabel = document.getElementById("update-status-label");
+        const btn = document.getElementById("btn-install-update");
+        if (ev.type === "update_progress") {
+          const steps = { downloading: "Downloading…", extracting: "Extracting…", installing: "Installing…" };
+          if (statusLabel) statusLabel.textContent = steps[ev.step] || ev.step;
+        } else if (ev.type === "update_complete") {
+          if (statusLabel) statusLabel.textContent = "Restarting… reload the page in a moment.";
+          if (btn) btn.style.display = "none";
+        } else if (ev.type === "update_failed") {
+          if (statusLabel) statusLabel.textContent = "Auto-update failed. Downloading installer…";
+          if (btn) { btn.disabled = false; btn.style.display = "none"; }
+          if (ev.downloadUrl) {
+            const a = document.createElement("a");
+            a.href = ev.downloadUrl;
+            a.download = "Tasker.zip";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+          }
+          setTimeout(() => {
+            if (statusLabel) statusLabel.textContent = "Tasker.zip downloaded — extract it and run the installer.";
+          }, 1500);
+        } else if (ev.type === "update_available") {
+          loadUpdateStatus();
+        }
       }
 
       function saveScanInterval() {
