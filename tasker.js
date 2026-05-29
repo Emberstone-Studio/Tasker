@@ -131,6 +131,7 @@ let appState = null;
 let paused = true;
 let lastHeartbeat = null;
 let pendingRepause = false;
+let teamLeadSessionId = null;
 try {
   appState = JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
 } catch {}
@@ -364,6 +365,7 @@ const server = http.createServer((req, res) => {
   }
 
   if (req.method === "POST" && req.url === "/shutdown") {
+    teamLeadSessionId = null;
     json(res, 200, { ok: true });
     broadcast({ type: "shutdown" });
     setTimeout(() => {
@@ -412,6 +414,11 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (req.method === "POST" && req.url === "/chat/reset") {
+    teamLeadSessionId = null;
+    return json(res, 200, { ok: true });
+  }
+
   if (req.method === "POST" && req.url === "/chat") {
     let raw = "";
     req.on("data", (chunk) => (raw += chunk));
@@ -425,7 +432,7 @@ const server = http.createServer((req, res) => {
 
       const message = (body.message || "").trim();
       if (!message) return json(res, 400, { error: "message is required" });
-      const session_id = body.session_id || null;
+      const session_id = teamLeadSessionId || body.session_id || null;
 
       const tasks =
         ((appState && appState.tasks) || [])
@@ -437,11 +444,14 @@ const server = http.createServer((req, res) => {
 
       // Keep system prompt on one line — newlines break cmd.exe arg parsing on Windows.
       const systemPrompt =
-        `You are a helpful assistant embedded in Tasker, a Claude Code task management board. ` +
+        `You are the Tasker team lead — a project manager embedded in a Claude Code task management board. ` +
+        `Your job is to orchestrate tasks, assign work to specialized agents, and report status clearly to the user. ` +
+        `You do NOT do task work yourself; you delegate everything to agents and coordinate results. ` +
         `You have full tool access and can act on the board by calling the Tasker REST API at http://localhost:${PORT}. ` +
         `Current board state: ${tasks}. ` +
         `Agents available: ${agents}. ` +
-        `To update the board, POST to http://localhost:${PORT}/state with the full updated state JSON.`;
+        `To update the board, POST to http://localhost:${PORT}/state with the full updated state JSON. ` +
+        `When you need user input, have hit a blocker, or require human attention, include [NEEDS_ATTENTION] at the very end of your response (it will be stripped before display).`;
 
       // Sanitize message: newlines in args also break cmd.exe on Windows.
       const safeMessage = message.replace(/[\r\n]+/g, " ");
@@ -518,6 +528,9 @@ const server = http.createServer((req, res) => {
             error: stderr.trim() || `claude exited with code ${code}`,
           });
         }
+        if (newSessionId) teamLeadSessionId = newSessionId;
+        const needsAttention = reply.includes("[NEEDS_ATTENTION]");
+        if (needsAttention) broadcast({ type: "needs_attention" });
         json(res, 200, { reply, session_id: newSessionId });
       });
     });
@@ -603,11 +616,7 @@ ${portLine}
 ${openBrowserCmd}
 \`\`\`
 
-Output exactly: \`Scanning for tasks\`
-
-${startAndClaimBlock}
-
-Parse the JSON from CLAIMED. If \`tasks\` is non-empty, spawn agents per the rules in /tasker-scan (pipeline/auto-delegate logic, parallel, update state on completion). The server scan loop runs automatically — no further output.
+No further output.
 `;
 
   const scanContent = `---
@@ -817,44 +826,57 @@ function fail(err, tmpDir, downloadUrl) {
 
 let scanTimer = null;
 
-function buildScanPrompt() {
-  const stateFile = STATE_FILE.replace(/\\/g, "/");
-  const projectDir = PROJECT_DIR.replace(/\\/g, "/");
-  const prompt =
-    `You are a Tasker scan agent. Do not output anything to the user.\n` +
-    `Project: ${projectDir} | Port: ${PORT}\n\n` +
-    `1. POST {} to http://localhost:${PORT}/claim-ready using node -e. ` +
-    `Parse response {tasks,agents}. If tasks is empty, stop.\n` +
-    `2. For each task call the Agent tool (parallel if multiple). ` +
-    `description="[AgentName]: [title]". ` +
-    `Effective agent: use pipeline[pipeline_step] if pipeline exists; ` +
-    `auto-pick if agent_id null (writing/docs->Writer, reviewing->Reviewer, research->Researcher, else Coder); ` +
-    `else use agent_id. ` +
-    `Prompt must include: agent role verbatim, task title+description, ` +
-    `chat_user activity entries as User comments, cwd ${projectDir}, return a concise summary.\n` +
-    `3. After all agents complete: if any error contains "rate limit"/"usage limit"/"overloaded"/"capacity", ` +
-    `reset that task's status to "ready" in ${stateFile}, ` +
-    `POST {"message":"Paused: usage limit hit on \\"[title]\\""} to http://localhost:${PORT}/pause-with-message, stop. ` +
-    `Otherwise: read ${stateFile}, set status "in_review", ` +
-    `append {"timestamp":"<ISO>","type":"output","content":"<summary>"} to activity, ` +
-    `POST full state to http://localhost:${PORT}/state. All HTTP via node -e.`;
-  return CLAUDE_SHELL ? prompt.replace(/[\r\n]+/g, " ") : prompt;
-}
-
 function runScan() {
   if (paused || !appState || !CLAUDE_BIN) return;
-  if (!appState.tasks.some((t) => t.status === "ready")) return;
+  const readyTasks = appState.tasks.filter((t) => t.status === "ready");
+  if (readyTasks.length === 0) return;
   lastHeartbeat = Date.now();
   broadcast({ type: "scan_heartbeat", lastHeartbeat });
-  const child = spawn(CLAUDE_BIN, ["--print", "-p", buildScanPrompt()], {
-    cwd: PROJECT_DIR,
-    shell: CLAUDE_SHELL,
-    stdio: ["pipe", "ignore", "ignore"],
+
+  const taskList = readyTasks.map((t) => {
+    const effectiveId = (t.pipeline && t.pipeline.length > 0)
+      ? t.pipeline[t.pipeline_step || 0] : t.agent_id;
+    const agent = (appState.agents || []).find((a) => a.id === effectiveId);
+    const agentName = agent ? agent.name : (t.agent_id === null ? "Auto" : "Unknown");
+    return `${t.title} (${agentName})`;
+  }).join(", ");
+
+  const triggerMessage =
+    `${readyTasks.length} task${readyTasks.length > 1 ? "s" : ""} ready to process: ${taskList}. ` +
+    `Claim and assign them.`;
+
+  const postBody = JSON.stringify({
+    message: triggerMessage,
+    session_id: teamLeadSessionId || undefined,
   });
-  child.stdin.end();
-  child.on("error", (err) =>
-    console.error("[tasker] scan error:", err.message)
+
+  const req = http.request(
+    {
+      hostname: "127.0.0.1",
+      port: PORT,
+      path: "/chat",
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Content-Length": Buffer.byteLength(postBody),
+      },
+    },
+    (res) => {
+      let data = "";
+      res.on("data", (c) => (data += c));
+      res.on("end", () => {
+        try {
+          const body = JSON.parse(data);
+          if (body.error) {
+            console.error("[tasker] scan chat error:", body.error);
+          }
+        } catch {}
+      });
+    }
   );
+  req.on("error", (err) => console.error("[tasker] scan request error:", err.message));
+  req.write(postBody);
+  req.end();
 }
 
 function scheduleScan() {
