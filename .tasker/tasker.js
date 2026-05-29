@@ -578,15 +578,18 @@ function installSkills() {
   // node-based server health check — works on Windows and Mac without curl
   const nodeCheck = `node -e "require('http').get('http://localhost:'+process.env.PORT+'/',r=>process.exit(0)).on('error',()=>process.exit(1))" PORT=$PORT 2>/dev/null`;
 
+  // Always restart: shut down any stale server (silently no-ops if nothing running)
+  // so freshly copied files are always picked up.
+  const shutdownExisting = `node -e "require('http').request({hostname:'localhost',port:process.env.PORT,path:'/shutdown',method:'POST'},()=>{}).on('error',()=>{}).end()" PORT=$PORT 2>/dev/null; sleep 1`;
+
   const startBlock = `\`\`\`bash
 ${portLine}
-${nodeCheck} || {
-  nohup node .tasker/tasker.js serve > /dev/null 2>&1 &
-  for i in 1 2 3 4 5 6 7 8 9 10; do
-    sleep 1
-    ${nodeCheck} && break
-  done
-}
+${shutdownExisting}
+nohup node .tasker/tasker.js serve > /dev/null 2>&1 &
+for i in 1 2 3 4 5 6 7 8 9 10; do
+  sleep 1
+  ${nodeCheck} && break
+done
 \`\`\``;
 
   const openBrowserCmd =
