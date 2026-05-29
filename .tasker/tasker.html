@@ -2395,8 +2395,9 @@
           const chatLines = [`Picked up ${ev.pickups.length} task${ev.pickups.length > 1 ? "s" : ""}:`];
           ev.pickups.forEach(p => {
             const task = state.tasks.find(t => t.id === p.taskId);
-            chatLines.push(`\n**${p.title}** → ${p.agent}`);
+            chatLines.push(`\n**${p.title}**`);
             if (task && task.description) chatLines.push(task.description.slice(0, 120) + (task.description.length > 120 ? "…" : ""));
+            chatLines.push(`\nAssigning to ${p.agent} agent.`);
           });
           _chatAppendMessage("assistant", chatLines.join("\n"));
           return;
