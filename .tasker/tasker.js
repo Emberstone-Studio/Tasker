@@ -10,7 +10,7 @@ const path = require("path");
 const os = require("os");
 const { spawn } = require("child_process");
 
-const VERSION = "1.2.0";
+const VERSION = "1.2.1";
 const GITHUB_REPO = "Emberstone-Studio/Tasker";
 const INSTALL_DIR = path.join(os.homedir(), ".claude", "tasker");
 
@@ -132,6 +132,7 @@ let paused = true;
 let lastHeartbeat = null;
 let pendingRepause = false;
 let teamLeadSessionId = null;
+let teamLeadScanSessionId = null;
 try {
   appState = JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
 } catch {}
@@ -219,8 +220,12 @@ const server = http.createServer((req, res) => {
     req.on("data", (chunk) => (raw += chunk));
     req.on("end", () => {
       try {
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed.tasks)) {
+          return json(res, 400, { error: "Invalid state: missing tasks array" });
+        }
         const prevInterval = appState && appState.scanInterval;
-        appState = JSON.parse(raw);
+        appState = parsed;
         fs.writeFileSync(STATE_FILE, raw, "utf8");
         broadcast({ type: "state_sync", state: appState });
         if (appState.scanInterval !== prevInterval) scheduleScan();
@@ -245,6 +250,7 @@ const server = http.createServer((req, res) => {
     req.on("end", () => {
       const { message } = JSON.parse(raw || "{}");
       paused = true;
+      if (scanTimer) { clearTimeout(scanTimer); scanTimer = null; }
       broadcast({ type: "tasker_state", paused: true });
       broadcast({
         type: "usage_cap",
@@ -434,12 +440,13 @@ const server = http.createServer((req, res) => {
       if (!message) return json(res, 400, { error: "message is required" });
       const session_id = teamLeadSessionId || body.session_id || null;
 
+      const sanitize = (s) => String(s).replace(/[\r\n"]/g, " ").trim();
       const tasks =
         ((appState && appState.tasks) || [])
-          .map((t) => `[${t.status}] ${t.title}`)
+          .map((t) => `[${t.status}] ${sanitize(t.title)}`)
           .join(", ") || "(no tasks)";
       const agents =
-        ((appState && appState.agents) || []).map((a) => a.name).join(", ") ||
+        ((appState && appState.agents) || []).map((a) => sanitize(a.name)).join(", ") ||
         "(none)";
 
       // Keep system prompt on one line — newlines break cmd.exe arg parsing on Windows.
@@ -451,6 +458,7 @@ const server = http.createServer((req, res) => {
         `Current board state: ${tasks}. ` +
         `Agents available: ${agents}. ` +
         `To update the board, POST to http://localhost:${PORT}/state with the full updated state JSON. ` +
+        `If you need to write any temporary files, use the .tasker/ directory (e.g. .tasker/tmp.json) and delete them when done. Never write temp files to the system temp directory or working directory root. ` +
         `When you need user input, have hit a blocker, or require human attention, include [NEEDS_ATTENTION] at the very end of your response (it will be stripped before display).`;
 
       // Sanitize message: newlines in args also break cmd.exe on Windows.
@@ -483,7 +491,7 @@ const server = http.createServer((req, res) => {
       let stderr = "";
       let replied = false;
 
-      const CHAT_TIMEOUT_MS = 120_000;
+      const CHAT_TIMEOUT_MS = 600_000;
       const killTimer = setTimeout(() => {
         if (replied) return;
         replied = true;
@@ -833,21 +841,23 @@ function runScan() {
   lastHeartbeat = Date.now();
   broadcast({ type: "scan_heartbeat", lastHeartbeat });
 
-  const taskList = readyTasks.map((t) => {
+  const pickups = readyTasks.map((t) => {
     const effectiveId = (t.pipeline && t.pipeline.length > 0)
       ? t.pipeline[t.pipeline_step || 0] : t.agent_id;
     const agent = (appState.agents || []).find((a) => a.id === effectiveId);
-    const agentName = agent ? agent.name : (t.agent_id === null ? "Auto" : "Unknown");
-    return `${t.title} (${agentName})`;
-  }).join(", ");
+    return { taskId: t.id, title: t.title, agent: agent ? agent.name : "Auto" };
+  });
 
+  broadcast({ type: "scan_claimed", pickups });
+
+  const taskList = pickups.map((p) => `${p.title} (${p.agent})`).join(", ");
   const triggerMessage =
     `${readyTasks.length} task${readyTasks.length > 1 ? "s" : ""} ready to process: ${taskList}. ` +
     `Claim and assign them.`;
 
   const postBody = JSON.stringify({
     message: triggerMessage,
-    session_id: teamLeadSessionId || undefined,
+    session_id: teamLeadScanSessionId || undefined,
   });
 
   const req = http.request(
@@ -869,7 +879,13 @@ function runScan() {
           const body = JSON.parse(data);
           if (body.error) {
             console.error("[tasker] scan chat error:", body.error);
+            return;
           }
+          if (body.session_id) teamLeadScanSessionId = body.session_id;
+          const reply = (body.reply || "").replace(/\[NEEDS_ATTENTION\]/g, "").trim();
+          if (reply) broadcast({ type: "team_lead_message", reply });
+          if ((body.reply || "").includes("[NEEDS_ATTENTION]"))
+            broadcast({ type: "needs_attention" });
         } catch {}
       });
     }

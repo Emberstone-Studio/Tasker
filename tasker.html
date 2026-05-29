@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tasker</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cstyle%3Epath,circle%7Bfill:%23111111%7D@media(prefers-color-scheme:dark)%7Bpath,circle%7Bfill:%23f0f0f0%7D%7D%3C/style%3E%3Cpath d='M22.74,68.64l-2.65-1.18.02,12.45c1.91,1.06,3.11,3.03,2.63,5.17s-2.25,3.57-4.39,3.6-3.97-1.37-4.51-3.45.58-4.23,2.56-5.31v-19.19c.02-3.91,2.58-7.12,6.33-8.07,0,0,.08,18.28,0,15.98Z'/%3E%3Cpath d='M77.26,52.65c3.75.95,6.31,4.17,6.32,8.07v19.19c1.99,1.08,3.13,3.14,2.57,5.31s-2.36,3.48-4.51,3.45-3.92-1.54-4.39-3.6.71-4.1,2.63-5.17l.02-12.45-2.65,1.18c-.08,2.3,0-15.98,0-15.98Z'/%3E%3Cpath d='M65.29,91.07c-7.91,6-18.24,6.87-26.92,2.29-8.69-4.61-14.45-13.47-14.48-23.42l-.05-17.29h52.32s-.02,16.96-.02,16.96c0,8.42-4.15,16.38-10.85,21.46ZM58.04,60.94c0-1.07-.87-1.94-1.94-1.94s-1.94.87-1.94,1.94.87,1.94,1.94,1.94,1.94-.87,1.94-1.94ZM64.02,60.94c0-1.07-.87-1.94-1.94-1.94s-1.94.87-1.94,1.94.87,1.94,1.94,1.94,1.94-.87,1.94-1.94ZM69.98,60.93c0-1.07-.87-1.94-1.94-1.94s-1.94.87-1.94,1.94.87,1.94,1.94,1.94,1.94-.87,1.94-1.94Z'/%3E%3Cpath d='M76.16,50.48H23.85s.01-8.42.01-8.42c.02-11.21,7.75-20.76,18.5-23.74,5.69-1.41,9.68-1.6,15.21-.06,10.81,3.01,18.54,12.68,18.56,23.97l.02,8.25ZM68.64,36.05c-.11-4.21-3.53-8.19-7.79-8.19l-21.82.02c-4.26,0-7.55,4.1-7.67,8.17-.13,4.78,3.67,8.68,8.39,8.66l20.91-.05c4.5-.01,8.08-4.08,7.97-8.61Z'/%3E%3Cpath d='M51.78,16.4h-3.6s-.03-3.96-.03-3.96c-2.05-.91-3.05-3.03-2.57-5.22.43-1.97,2.31-3.5,4.41-3.49s3.98,1.49,4.43,3.52c.48,2.19-.56,4.36-2.64,5.24v3.92Z'/%3E%3Ccircle cx='41.23' cy='36.23' r='3.55'/%3E%3Ccircle cx='58.75' cy='36.23' r='3.54'/%3E%3C/svg%3E" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link
       href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap"
@@ -37,8 +38,7 @@
             "role": "You are a writing agent. Your job is to write documentation, copy, summaries, and prose. Match the existing tone and style. Be clear and concise.",
             "color": "#8b5cf6"
           }
-        ],
-        "logs": []
+        ]
       }
     </script>
     <style>
@@ -80,11 +80,11 @@
 
       [data-theme="light"] {
         --bg: #e8e8e8;
-        --bg-input: #ffffff;
+        --bg-input: #e3e3e3;
         --bg-subtle: #dedede;
         --bg-badge: #d4d4d4;
-        --card-bg: #ffffff;
-        --card-bg-hover: #f0f0f0;
+        --card-bg: #eeeeee;
+        --card-bg-hover: #f8f8f8;
         --border: #c8c8c8;
         --border-hover: #999999;
         --scrollbar: #bbbbbb;
@@ -214,25 +214,15 @@
         gap: 8px;
         font-size: 11px;
         font-family: var(--font-mono);
-        color: var(--text-secondary);
+        color: var(--text-tertiary);
         cursor: pointer;
         -webkit-user-select: none;
         user-select: none;
       }
 
-      #scan-countdown {
-        font-size: 11px;
-        font-family: var(--font-mono);
-        color: var(--text-tertiary);
-        display: none;
-        align-items: center;
-        white-space: nowrap;
-      }
-
       #watcher-status.disconnected,
       #watcher-status.paused {
         cursor: default;
-        opacity: 0.5;
       }
 
       .topbar-btn {
@@ -1681,7 +1671,7 @@
         <div id="chat-panel">
           <div id="chat-panel-inner">
             <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);flex-shrink:0;">
-              <span style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;">Claude</span>
+              <span style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;">Chat</span>
               <button type="button" onclick="newChatSession()" style="background:none;border:1px solid var(--border);color:var(--text-secondary);cursor:pointer;font-size:11px;font-family:var(--font-ui);padding:3px 8px;" title="Start a new chat session">New Chat</button>
             </div>
             <div id="chat-panel-messages"></div>
@@ -1689,7 +1679,7 @@
               <textarea
                 id="chat-panel-textarea"
                 class="chat-input"
-                placeholder="Ask Claude about your board…"
+                placeholder="What's new?"
                 rows="1"
               ></textarea>
               <button
@@ -2353,18 +2343,18 @@
             lbl.textContent = lines.join(", ");
             setTimeout(() => {
               const isPaused = document.getElementById("watcher-status")?.classList.contains("paused");
-              if (isPaused) { lbl.textContent = "Paused"; }
+              if (isPaused) { lbl.textContent = ""; }
               else if (lbl.textContent === lines.join(", ")) startCountdown(state.scanInterval || 60);
             }, 4000);
           }
-          const chatLines = [`Picked up ${ev.pickups.length} task${ev.pickups.length > 1 ? "s" : ""}:`];
+          const chatLines = [`Picked up ${ev.pickups.length} task${ev.pickups.length > 1 ? "s" : ""}:\n`];
           ev.pickups.forEach(p => {
             const task = state.tasks.find(t => t.id === p.taskId);
-            chatLines.push(`\n${p.title}`);
+            chatLines.push(`**${p.title}** → ${p.agent}`);
             if (task && task.description) chatLines.push(task.description.slice(0, 120) + (task.description.length > 120 ? "…" : ""));
-            chatLines.push(`Assigning to ${p.agent} agent.`);
+            chatLines.push("");
           });
-          addLog(null, chatLines.join(" "));
+          _chatAppendMessage("assistant", chatLines.join("\n"));
           return;
         }
         if (ev.type === "needs_attention") {
@@ -2375,6 +2365,10 @@
             if (btn) btn.classList.add("active");
             _initChatPanel();
           }
+          return;
+        }
+        if (ev.type === "team_lead_message") {
+          if (ev.reply) _chatAppendMessage("assistant", ev.reply);
           return;
         }
         if (ev.type === "usage_cap") {
@@ -2478,6 +2472,27 @@
 
       let _chatSessionId = null;
 
+      function _renderMarkdown(text) {
+        const lines = text.split("\n");
+        let html = "";
+        let inList = false;
+        for (const line of lines) {
+          const esc = line.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+          const fmt = esc
+            .replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>")
+            .replace(/`([^`]+)`/g,'<code style="font-family:var(--font-mono);background:var(--bg-badge);padding:1px 4px;border-radius:3px;font-size:0.9em">$1</code>');
+          if (/^[-*] /.test(line)) {
+            if (!inList) { html += '<ul style="margin:4px 0;padding-left:18px;list-style:disc">'; inList = true; }
+            html += `<li>${fmt.slice(2)}</li>`;
+          } else {
+            if (inList) { html += "</ul>"; inList = false; }
+            html += line === "" ? "<br>" : `${fmt}<br>`;
+          }
+        }
+        if (inList) html += "</ul>";
+        return html;
+      }
+
       function _chatAppendMessage(role, text) {
         const list = document.getElementById("chat-panel-messages");
         if (!list) return;
@@ -2490,7 +2505,11 @@
 
         const bubble = document.createElement("div");
         bubble.className = "chat-panel-bubble";
-        bubble.textContent = text;
+        if (role === "assistant") {
+          bubble.innerHTML = _renderMarkdown(text);
+        } else {
+          bubble.textContent = text;
+        }
 
         const meta = document.createElement("span");
         meta.className = "chat-panel-meta";
@@ -2573,7 +2592,7 @@
           const empty = document.createElement("div");
           empty.id = "chat-panel-empty";
           empty.textContent =
-            "No messages yet. Ask Claude anything about your board.";
+            "No messages yet. Ask anything about your board or project.";
           list.appendChild(empty);
         }
 
@@ -2723,7 +2742,7 @@
                     : 0;
               const isIndeterminate =
                 outputCount === 0 && task.progress === undefined;
-              return `<div class="card-progress"><div class="card-progress-bar${isIndeterminate ? " indeterminate" : `" style="width:${pct}%`}"></div></div>`;
+              return `<div class="card-progress"><div class="card-progress-bar${isIndeterminate ? " indeterminate" : ""}"${isIndeterminate ? "" : ` style="width:${pct}%"`}></div></div>`;
             })()
           : ""
       }
@@ -3194,6 +3213,8 @@
       function addLog(taskId, message) {
         const ts = new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
         _chatAppendMessage("system", `${ts}  ${message}`);
+        if (!state.logs) state.logs = [];
+        state.logs.push({ timestamp: new Date().toISOString(), task_id: taskId, message });
       }
 
       // ─────────────────────────────────────────────────────────────────
@@ -3349,6 +3370,11 @@
       }
 
       function triggerScanNow() {
+        const statusEl = document.getElementById("watcher-status");
+        if (!statusEl || statusEl.classList.contains("disconnected")) {
+          console.warn("[Tasker] Scan Now ignored: SSE connection is not active.");
+          return;
+        }
         const lbl = document.getElementById("watcher-label");
         if (lbl) lbl.textContent = "Scanning...";
         fetch(`${WATCHER_URL}/trigger-scan`, { method: "POST" })

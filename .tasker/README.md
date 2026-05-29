@@ -27,7 +27,7 @@ Open the command palette (`Cmd+Shift+P` on macOS, `Ctrl+Shift+P` on Windows/Linu
 
 ### 3. Use in any project
 
-Open a project in VS Code and run `/tasker` in Claude Code. On the first run in a new project it creates a `.tasker/` directory and copies `tasker.js`, `tasker.html`, and `README.md` into it, then starts the server and opens the board. The server starts **paused** — press **▶** to start the scan loop or **⚡** to run a one-off scan.
+Open a project in VS Code and run `/tasker` in Claude Code. On the first run in a new project it creates a `.tasker/` directory and copies `tasker.js`, `tasker.html`, and `README.md` into it, then starts the server and opens the board. The server starts **paused** — press **▶** to start the scan loop or the **⚡** (lightning bolt) button to run a one-off scan immediately.
 
 ---
 
@@ -38,19 +38,19 @@ Tasks move through five columns:
 | Column | Meaning |
 |---|---|
 | **Backlog** | Not ready yet |
-| **Ready** | Queued for execution — the scan loop will pick these up |
+| **Ready** | Queued for execution — the scan loop picks these up |
 | **In Progress** | Being worked on |
 | **In Review** | Review the output, then move to Done or back into the queue with new comments |
 | **Done** | Complete |
 
-Drag cards between columns at any time. Click the **+** in any column header to add a task directly into that column.
+Drag cards between columns at any time. Click the **+** in any column header to add a task directly into that column. The project name appears in the top bar center when connected.
 
 ## Tasks
 
 Each task has:
 
 - **Title** and **Description** — the description becomes the agent's instructions
-- **Agent** — which agent to assign; leave it as **Auto** to let the team lead decide
+- **Agent** — which agent to assign; leave it as **Auto** to let the team lead choose
 - **Pipeline** — an optional sequence of agents to run in order
 - **Priority** — Low / Medium / High (shown as a coloured dot on the card)
 
@@ -64,7 +64,7 @@ Each task has:
 
 ### Comments
 
-Each task has an activity log where you can leave comments. Any comments you add are included in the agent's prompt when the task is next picked up, so the agent can address them.
+Each task has an activity log and comment box. Comments you add are included in the agent's prompt when the task is next picked up, so the agent can address them.
 
 ## Agents
 
@@ -72,7 +72,7 @@ Built-in agents: **Researcher**, **Coder**, **Reviewer**, **Writer**. Each has a
 
 Add or edit agents from the **Agents** tab. The role field is the full system prompt sent to the sub-agent when it executes a task — be specific.
 
-If a task's agent is set to **Auto** (`agent_id: null`), the team lead chooses the most appropriate agent from the available list.
+If a task's agent is set to **Auto** (`agent_id: null`), the team lead chooses the most appropriate agent from the available list based on task content.
 
 ## Pipelines
 
@@ -91,8 +91,8 @@ Running the installer installs four skills into `~/.claude/commands/`:
 | Skill | Purpose |
 |---|---|
 | `/tasker` | Bootstraps project files if missing, starts the server, opens the board |
-| `/tasker-scan` | Manually triggers a scan: starts the server if needed, picks up ready tasks, and executes them |
-| `/tasker-pause` | Pauses the scan loop (clears the server timer) |
+| `/tasker-scan` | Manually triggers a scan: starts the server if needed, claims ready tasks, and executes them via sub-agents |
+| `/tasker-pause` | Pauses the scan loop |
 | `/tasker-stop` | Shuts down the server |
 
 Tasker itself has no built-in model calls. All task execution happens inside Claude Code.
@@ -103,17 +103,18 @@ Each project gets a stable port derived from its directory path (range 7843–98
 
 ### How the scan loop works
 
-The scan loop runs entirely inside the server process. The server starts **paused** — press ▶ to begin. Once running, it checks for ready tasks on a configurable interval (default 60 seconds). On each tick:
+The server starts **paused**. Once running (press ▶), it checks for ready tasks on a configurable interval (default 60 seconds). On each tick:
 
-1. If no ready tasks, skip
-2. Spawn `claude --print` with a self-contained prompt instructing it to call `/claim-ready`, dispatch sub-agents, and update task state when done
-3. Reschedule the timer
+1. If no ready tasks, skip and reschedule
+2. Send a trigger message to a Claude instance acting as team lead via the `/chat` endpoint
+3. The team lead calls `/claim-ready` to atomically move ready tasks to `in_progress`, spawns one sub-agent per task in parallel, then posts results back via `/state`
+4. Reschedule the timer
 
-The loop is completely invisible — you will never see a background turn fire in Claude Code. When tasks are picked up, a notification appears in the status bar and the Chat panel.
+The board updates in real time over SSE. When tasks are picked up, the status bar and chat panel both show which tasks are being worked on.
 
 ### Team lead + agent pattern
 
-When tasks are ready, a Claude instance acts as a **team lead** (orchestrator): it calls `/claim-ready` to atomically claim ready tasks, delegates each to a dedicated sub-agent via the Agent tool, then posts results back to the server. The team lead never does task work itself — it only coordinates.
+When tasks are ready, a Claude instance acts as the **team lead** (orchestrator): it claims ready tasks, delegates each to a dedicated sub-agent via the Agent tool, then posts results back to the server. The team lead never does task work itself — it only coordinates.
 
 Sub-agents receive a self-contained prompt that includes the agent's role, the task title and description, any user comments from the activity log, the working directory, and instructions on what to return. Sub-agents have full access to Claude Code's tools — file read/write, shell, search, and so on.
 
@@ -121,41 +122,43 @@ If multiple tasks are ready, all sub-agents are spawned in a single message as p
 
 ### Usage limits
 
-If an agent hits a rate limit or usage cap, the team lead resets the task back to **Ready** and posts a warning banner to the board. Click **Resume** on the banner to clear it and restart the loop.
+If an agent hits a rate limit or usage cap, the team lead resets the task back to **Ready**, pauses the server, and posts a warning banner to the board. Click **Resume** on the banner to clear it and restart the loop.
 
-## Pause and resume
+## Pause, resume, and scan controls
 
 The server starts paused. The top bar shows the current status and a countdown to the next scan. Controls available when the server is running:
 
-- **⚡ Scan Now** — immediately checks for ready tasks and processes them; visible when running or paused. When clicked while paused, runs a one-off scan and returns to paused when done.
 - **▶ Resume** — starts the automatic scan timer; visible when paused
 - **⏸ Pause** — stops the scan timer; visible when running
-- **⏻ Stop** — shuts down the server entirely
+- **⚡ Scan Now** — immediately checks for ready tasks and processes them; visible when running or paused. When clicked while paused, runs a one-off scan then returns to paused when done.
+- **⏻ Stop** — shuts down the server entirely; visible whenever the server is connected
 
 ## Chat panel
 
-Click the **chat bubble icon** in the top-right corner to open the chat panel. It slides in from the right side of the board and stays open as you work.
+Click the **chat bubble icon** in the top-right corner to open the chat panel. It slides in from the right and stays open as you work.
 
 The chat panel connects to a Claude instance that has full awareness of your current board state — all tasks and their statuses, and the list of configured agents. You can ask it to explain what's happening, create new tasks, or make changes to the board. The assistant has tool access and can update the board by calling the Tasker REST API directly.
 
-Conversations persist within the session. Each message is sent with a session ID so the assistant maintains context across exchanges.
+Conversations persist within the session. Click **New Chat** at the top of the panel to start a fresh session and clear the history.
 
-The chat panel also serves as the activity log. When the scan loop picks up a task, a message appears showing the task title, description, and assigned agent. Task events (created, deleted, moved to Done) appear as subtle system messages.
+The chat panel also serves as the activity feed. When the scan loop picks up tasks, a message appears listing each task and its assigned agent. After each scan, the team lead's response is posted to the panel. Task events (created, deleted, moved) appear as subtle system messages.
+
+If the team lead needs your attention (posts `[NEEDS_ATTENTION]` in its response), the chat panel opens automatically.
 
 ## Settings
 
 Open the **Settings** panel (⚙) to configure:
 
-- **Updates** — shown when a newer version is available; click Install to update automatically, or download manually if the silent install fails
+- **Updates** — shown when a newer version is available; click Install to update automatically, or the installer downloads automatically if the silent install fails
 - **Scan interval** — how often the loop checks for ready tasks (30s / 1m / 2m / 5m / 10m)
-- **Dark/light mode** — preference saved in `localStorage`
+- **Appearance** — dark/light mode toggle; preference saved in `localStorage`
 - **Permissions** — which tool categories sub-agents can use without a permission prompt; written to `.claude/settings.json`
 
 | Permission | Tools |
 |---|---|
 | Read files | `Read` |
 | Edit / Write files | `Edit`, `Write` |
-| Bash commands | `Bash(*)` |
+| Bash / PowerShell commands | `Bash(*)`, `PowerShell(*)` |
 | Web access | `WebFetch(*)`, `WebSearch(*)` |
 
 ## Data
