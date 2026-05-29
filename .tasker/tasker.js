@@ -610,31 +610,6 @@ The server scan loop restarts automatically — no ScheduleWakeup needed.
 
 **Important**: You are the coordinator. Never execute task work yourself — always delegate via Agent.`;
 
-  const watchContent = `---
-description: Check server state, then invoke /tasker-scan if server is running and not paused
----
-
-Do not output any text to the user. Execute silently.
-
-## 1. Check pause state
-
-\`\`\`bash
-${portLine}
-node -e "
-const http=require('http');
-http.get('http://localhost:'+process.env.PORT+'/paused',res=>{let d='';res.on('data',c=>d+=c);res.on('end',()=>console.log(d))}).on('error',()=>{console.log('unreachable');process.exit(1)});
-" PORT=$PORT
-\`\`\`
-
-- If the command **fails** (server unreachable) — stop immediately. Do not reschedule.
-- If the response is \`{"paused":true}\` — stop immediately. Do not reschedule.
-- If the response is \`{"paused":false}\` — proceed to step 2.
-
-## 2. Run the next scan
-
-Invoke the \`/tasker-scan\` skill.
-`;
-
   const pauseContent = `---
 description: Pause the Tasker scan loop
 ---
@@ -669,8 +644,6 @@ r.on('error',e=>console.log('err:',e.message));r.end();
     console.log(`[tasker] Skill installed: /tasker`);
     fs.writeFileSync(path.join(commandsDir, "tasker-scan.md"), scanContent, "utf8");
     console.log(`[tasker] Skill installed: /tasker-scan`);
-    fs.writeFileSync(path.join(commandsDir, "tasker-watch.md"), watchContent, "utf8");
-    console.log(`[tasker] Skill installed: /tasker-watch`);
     fs.writeFileSync(path.join(commandsDir, "tasker-pause.md"), pauseContent, "utf8");
     console.log(`[tasker] Skill installed: /tasker-pause`);
     fs.writeFileSync(path.join(commandsDir, "tasker-stop.md"), stopContent, "utf8");

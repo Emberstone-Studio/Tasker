@@ -19,7 +19,7 @@ Download the [latest release](https://github.com/Emberstone-Studio/Tasker/releas
 - **macOS** — double-click `Install-Mac.command`
 - **Windows** — double-click `Install-Windows.bat`
 
-This copies the `Tasker/` folder to `~/.claude/tasker/`, installs five Claude Code skills into `~/.claude/commands/`, and prints the next steps.
+This copies the `.tasker/` folder to `~/.claude/tasker/`, installs four Claude Code skills into `~/.claude/commands/`, and prints the next steps.
 
 ### 2. Reload VS Code
 
@@ -27,7 +27,7 @@ Open the command palette (`Cmd+Shift+P` on macOS, `Ctrl+Shift+P` on Windows/Linu
 
 ### 3. Use in any project
 
-Open a project in VS Code and run `/tasker` in Claude Code. On the first run in a new project it creates a `Tasker/` directory and copies `tasker.js`, `tasker.html`, and `README.md` into it, then starts the server, opens the board, and begins the scan loop. Nothing to copy or unzip per project.
+Open a project in VS Code and run `/tasker` in Claude Code. On the first run in a new project it creates a `.tasker/` directory and copies `tasker.js`, `tasker.html`, and `README.md` into it, then starts the server, opens the board, and begins the scan loop. Nothing to copy or unzip per project.
 
 ---
 
@@ -38,8 +38,8 @@ Tasks move through five columns:
 | Column | Meaning |
 |---|---|
 | **Backlog** | Not ready yet |
-| **Ready** | Queued for execution — Claude Code will pick these up |
-| **In Progress** | Claude Code is working on it |
+| **Ready** | Queued for execution — the scan loop will pick these up |
+| **In Progress** | Being worked on |
 | **In Review** | Review the output, then move to Done or back into the queue with new comments |
 | **Done** | Complete |
 
@@ -51,13 +51,13 @@ Each task has:
 
 - **Title** and **Description** — the description becomes the agent's instructions
 - **Agent** — which agent to assign; leave it as **Auto** to let the team lead decide
-- **Pipeline** — an optional sequence of agents to run in order (each agent's output is passed to the next)
+- **Pipeline** — an optional sequence of agents to run in order
 - **Priority** — Low / Medium / High (shown as a coloured dot on the card)
 
 ### Workflow
 
 1. Create a task in **Backlog** or **Ready**
-2. Run `/tasker` in Claude Code — it picks up all Ready tasks and executes them
+2. Run `/tasker` in Claude Code — the server starts and the scan loop picks up ready tasks automatically
 3. Tasks move to **In Review** when done, with output in the activity log
 4. Review the output, then click **Move to Done**
 
@@ -85,37 +85,34 @@ The card shows a **Step N/M** badge while a pipeline task is in progress, and th
 
 ## Claude Code skills
 
-Running `Install-Mac.command` or `Install-Windows.bat` installs five skills into `~/.claude/commands/`:
+Running the installer installs four skills into `~/.claude/commands/`:
 
 | Skill | Purpose |
 |---|---|
-| `/tasker` | Bootstraps project files if missing, starts the server, opens the board, and starts the scan loop |
-| `/tasker-scan` | Starts the server if needed, resumes the loop, scans the queue, executes ready tasks, then schedules `/tasker-watch` |
-| `/tasker-watch` | Checks pause state, then calls `/tasker-scan` if not paused |
-| `/tasker-pause` | Pauses the scan loop (server keeps running) |
+| `/tasker` | Bootstraps project files if missing, starts the server, opens the board |
+| `/tasker-scan` | Manually triggers a scan: starts the server if needed, picks up ready tasks, and executes them |
+| `/tasker-pause` | Pauses the scan loop (clears the server timer) |
 | `/tasker-stop` | Shuts down the server |
 
 Tasker itself has no built-in model calls. All task execution happens inside Claude Code.
 
 ### Ports
 
-Each project gets a stable port derived from its directory path (range 7843–9842), so multiple projects can run simultaneously without conflict. The port is resolved at runtime — the skills always run `node Tasker/tasker.js port` to discover it rather than using a hardcoded value.
+Each project gets a stable port derived from its directory path (range 7843–9842), so multiple projects can run simultaneously without conflict.
 
-### How the loop works
+### How the scan loop works
 
-`/tasker-scan` and `/tasker-watch` alternate to keep the queue running:
+The scan loop runs entirely inside the server process — no ScheduleWakeup, no background Claude Code turns. On startup, the server starts a timer (default 60 seconds, configurable in Settings). On each tick:
 
-1. `/tasker-scan` starts the server (if not running), resumes the loop, then scans the queue
-2. It reads `Tasker/tasks.json`, finds all tasks with `"status": "ready"`, marks them **In Progress**, and spawns a dedicated sub-agent per task via the Agent tool
-3. When agents finish, tasks move to **In Review** with output posted to the activity log
-4. `/tasker-scan` schedules `/tasker-watch` by calling `ScheduleWakeup` with `delaySeconds=30`. The runtime clamps this to a minimum of ~60 seconds. The actual delay is extracted from the wakeup confirmation text and posted to `POST /next-scan` so the countdown on the board reflects reality rather than the requested delay
-5. `/tasker-watch` wakes up, checks the pause state via `GET /paused`, and calls `/tasker-scan` again if not paused
+1. If paused or no ready tasks, skip
+2. Spawn `claude --print` with a self-contained prompt instructing it to call `/claim-ready`, dispatch sub-agents, and update task state when done
+3. Reschedule the timer
 
-The loop runs until you pause or stop it. Tasks moved to Ready while the loop is running are picked up on the next cycle.
+The loop is completely invisible — you will never see a background turn fire in Claude Code.
 
 ### Team lead + agent pattern
 
-`/tasker-scan` acts as a **team lead** (orchestrator): it reads the queue, delegates each task to a dedicated sub-agent via the Agent tool, then collects and records the results. The team lead never does task work itself — it only coordinates.
+When tasks are ready, a Claude instance acts as a **team lead** (orchestrator): it calls `/claim-ready` to atomically claim ready tasks, delegates each to a dedicated sub-agent via the Agent tool, then posts results back to the server. The team lead never does task work itself — it only coordinates.
 
 Sub-agents receive a self-contained prompt that includes the agent's role, the task title and description, any user comments from the activity log, the working directory, and instructions on what to return. Sub-agents have full access to Claude Code's tools — file read/write, shell, search, and so on.
 
@@ -123,14 +120,18 @@ If multiple tasks are ready, all sub-agents are spawned in a single message as p
 
 ### Usage limits
 
-If an agent returns an error indicating a rate limit or usage cap, the team lead resets the task back to **Ready**, posts a warning banner to the board via `POST /pause-with-message`, and stops the loop. The board displays the message with a **Resume** button. Clicking Resume clears the banner and posts to `POST /resume` — then run `/tasker-scan` in Claude Code to restart the loop.
+If an agent hits a rate limit or usage cap, the team lead resets the task back to **Ready** and posts a warning banner to the board. Click **Resume** on the banner to clear it and restart the loop.
 
 ## Pause and resume
 
-The top bar shows the current status and a **countdown** to the next scan. Two control buttons appear when the server is running:
+The top bar shows the current status and a countdown to the next scan. Controls available when the server is running:
 
-- **Pause** (‖) — stops the loop after the current scan; the board shows "Paused — run: /tasker-scan". To resume, run `/tasker-scan` in Claude Code. It always resumes the loop and clears the paused state before scanning.
-- **Stop** (⏻) — shuts down the server entirely; the board shows "Offline - run: /tasker". To resume, run `/tasker` in Claude Code. It will restart the server, re-open the board, and initiate `/tasker-scan`.
+- **⚡ Scan Now** — immediately checks for ready tasks and processes them; visible when running or paused
+- **▶ Resume** — restarts the scan timer from the beginning; visible when paused
+- **⏸ Pause** — stops the scan timer; visible when running
+- **⏻ Stop** — shuts down the server entirely
+
+When paused, the timer is fully cleared. Clicking Resume or Scan Now are the two ways to act while paused — Resume restarts the automatic loop, Scan Now runs a one-off check without restarting the timer.
 
 ## Chat panel
 
@@ -142,10 +143,11 @@ Conversations persist within the session. Each message is sent with a session ID
 
 ## Settings
 
-Open the **Settings** panel (⚙) to:
+Open the **Settings** panel (⚙) to configure:
 
-- **Toggle dark/light mode** — switches between the dark (default) and light themes; preference is saved in `localStorage`
-- **Permissions** — toggle which tool categories sub-agents are allowed to use without a permission prompt. Changes are written to `.claude/settings.json` in the project directory
+- **Scan interval** — how often the loop checks for ready tasks (30s / 1m / 2m / 5m / 10m)
+- **Dark/light mode** — preference saved in `localStorage`
+- **Permissions** — which tool categories sub-agents can use without a permission prompt; written to `.claude/settings.json`
 
 | Permission | Tools |
 |---|---|
@@ -156,9 +158,7 @@ Open the **Settings** panel (⚙) to:
 
 ## Data
 
-State is persisted in `Tasker/tasks.json` and synced to the browser in real time over SSE. The file is written on every state change.
-
-Note: to export state, copy `Tasker/tasks.json` directly.
+State is persisted in `.tasker/tasks.json` and synced to the browser in real time over SSE. The file is written on every state change. To export state, copy `.tasker/tasks.json` directly.
 
 ## Files
 
@@ -168,10 +168,10 @@ Note: to export state, copy `Tasker/tasks.json` directly.
 | `Install-Windows.bat` | Windows installer — double-click to run |
 | `~/.claude/tasker/` | Master copy installed globally |
 | `~/.claude/commands/tasker*.md` | Global skills, installed once, shared by all projects |
-| `<project>/Tasker/tasker.js` | Per-project server (copied from master on first `/tasker` run) |
-| `<project>/Tasker/tasker.html` | Per-project UI (copied from master on first `/tasker` run) |
-| `<project>/Tasker/README.md` | Per-project readme (copied from master on first `/tasker` run) |
-| `<project>/Tasker/tasks.json` | Per-project task state (created on first server start) |
+| `<project>/.tasker/tasker.js` | Per-project server (copied from master on first `/tasker` run) |
+| `<project>/.tasker/tasker.html` | Per-project UI (copied from master on first `/tasker` run) |
+| `<project>/.tasker/README.md` | Per-project readme (copied from master on first `/tasker` run) |
+| `<project>/.tasker/tasks.json` | Per-project task state (created on first server start) |
 
 ---
 
