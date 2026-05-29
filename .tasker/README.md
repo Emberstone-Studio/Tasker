@@ -109,7 +109,7 @@ The scan loop runs entirely inside the server process. The server starts **pause
 2. Spawn `claude --print` with a self-contained prompt instructing it to call `/claim-ready`, dispatch sub-agents, and update task state when done
 3. Reschedule the timer
 
-The loop is completely invisible — you will never see a background turn fire in Claude Code. When tasks are picked up, a notification appears in the status bar, the Logs tab, and the Chat panel.
+The loop is completely invisible — you will never see a background turn fire in Claude Code. When tasks are picked up, a notification appears in the status bar and the Chat panel.
 
 ### Team lead + agent pattern
 
@@ -132,14 +132,6 @@ The server starts paused. The top bar shows the current status and a countdown t
 - **⏸ Pause** — stops the scan timer; visible when running
 - **⏻ Stop** — shuts down the server entirely
 
-## Scan feedback
-
-When tasks are picked up, Tasker notifies you in three places:
-
-- **Status bar** — briefly shows the task name and assigned agent, then returns to the countdown
-- **Logs tab** — adds a persistent "Picked up: Task → Agent" entry
-- **Chat panel** — posts a message with the task title, description, and agent assignment
-
 ## Chat panel
 
 Click the **chat bubble icon** in the top-right corner to open the chat panel. It slides in from the right side of the board and stays open as you work.
@@ -147,6 +139,8 @@ Click the **chat bubble icon** in the top-right corner to open the chat panel. I
 The chat panel connects to a Claude instance that has full awareness of your current board state — all tasks and their statuses, and the list of configured agents. You can ask it to explain what's happening, create new tasks, or make changes to the board. The assistant has tool access and can update the board by calling the Tasker REST API directly.
 
 Conversations persist within the session. Each message is sent with a session ID so the assistant maintains context across exchanges.
+
+The chat panel also serves as the activity log. When the scan loop picks up a task, a message appears showing the task title, description, and assigned agent. Task events (created, deleted, moved to Done) appear as subtle system messages.
 
 ## Settings
 
