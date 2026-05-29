@@ -1,0 +1,11 @@
+INSTALLING TASKER
+=================
+
+1. Open VS Code
+2. Drag tasker.vsix into the Extensions panel
+   — or — Extensions → ··· → Install from VSIX → select tasker.vsix
+3. Reload VS Code when prompted
+
+Done! Open any project and run /tasker in Claude Code.
+
+Requires: Node.js (nodejs.org), VS Code, Claude Code
