@@ -130,6 +130,7 @@ if (!CLAUDE_BIN) {
 let appState = null;
 let paused = false;
 let lastHeartbeat = null;
+let pendingRepause = false;
 try {
   appState = JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
 } catch {}
@@ -265,17 +266,21 @@ const server = http.createServer((req, res) => {
     if (found > 0) {
       const wasPaused = paused;
       paused = false;
+      pendingRepause = wasPaused;
       if (scanTimer) clearTimeout(scanTimer);
       scanTimer = setTimeout(() => {
         runScan();
-        if (wasPaused) {
-          paused = true;
-          broadcast({ type: "tasker_state", paused: true });
-          scanTimer = null;
-        } else {
-          scheduleScan();
-        }
+        if (!wasPaused) scheduleScan();
       }, 0);
+      if (wasPaused) {
+        setTimeout(() => {
+          if (pendingRepause) {
+            pendingRepause = false;
+            paused = true;
+            broadcast({ type: "tasker_state", paused: true });
+          }
+        }, 120000);
+      }
     }
     return json(res, 200, { ok: true, found });
   }
@@ -305,6 +310,11 @@ const server = http.createServer((req, res) => {
       return { taskId: t.id, title: t.title, agent: agent ? agent.name : "Auto" };
     });
     broadcast({ type: "scan_claimed", pickups });
+    if (pendingRepause) {
+      pendingRepause = false;
+      paused = true;
+      broadcast({ type: "tasker_state", paused: true });
+    }
     return json(res, 200, { tasks: claimed, agents: appState.agents });
   }
 
