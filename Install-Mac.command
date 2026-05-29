@@ -7,7 +7,7 @@ echo "Installing Tasker to $DEST ..."
 echo ""
 
 mkdir -p "$DEST"
-cp -r "$DIR/.tasker/." "$DEST/"
+cp -r "$DIR/Tasker/." "$DEST/"
 
 echo "Installing Claude Code skills ..."
 echo ""

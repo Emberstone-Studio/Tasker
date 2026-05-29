@@ -4,7 +4,7 @@ echo.
 echo Installing Tasker to %DEST% ...
 echo.
 if not exist "%DEST%" mkdir "%DEST%"
-xcopy /E /I /Y "%~dp0.tasker" "%DEST%"
+xcopy /E /I /Y "%~dp0Tasker" "%DEST%"
 echo.
 echo Installing Claude Code skills ...
 echo.
