@@ -1,0 +1,50 @@
+{
+  "model_id": "gemini-3-flash",
+  "display_name": "Gemini 3 Flash",
+  "provider": "Google",
+  "tier": "fast",
+  "api": {
+    "endpoint": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash:generateContent",
+    "model_string": "gemini-3-flash",
+    "auth": "API key (x-goog-api-key header or ?key= query param)",
+    "format": "gemini"
+  },
+  "capabilities": {
+    "best_for": [
+      "fast multimodal tasks",
+      "high-volume summarization",
+      "long-context processing at low cost",
+      "classification and extraction",
+      "quick drafts"
+    ],
+    "avoid": [
+      "complex multi-step reasoning",
+      "format-critical outputs without examples",
+      "nuanced code work"
+    ],
+    "context_window": 1000000,
+    "supports_multimodal": true,
+    "supports_tool_use": true,
+    "relative_speed": "fast",
+    "relative_cost": "low"
+  },
+  "prompting": {
+    "responds_best_to": "Short, explicit, single-purpose prompts with the format spelled out.",
+    "avoid": "Multi-step reasoning or ambiguous instructions.",
+    "system_prompt_prefix": "Be concise; return only the requested output in the exact format.",
+    "ideal_task_length": "brief",
+    "needs_examples": true
+  },
+  "quirks": [
+    "UNVERIFIED version string at dossier creation — confirm availability before routing",
+    "Excellent cost and speed for large-input tasks",
+    "Instruction-following looser than peers — give an example",
+    "Best for cheap summarization and extraction over big documents"
+  ],
+  "handoff": {
+    "output_format_instruction": "Demand strict format and supply an example.",
+    "evaluation_notes": "Verify completeness and format adherence; escalate to a Pro tier if reasoning was needed."
+  },
+  "last_updated": "2026-05-30",
+  "source": "claude-opus — initial dossier"
+}

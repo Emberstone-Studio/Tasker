@@ -1,0 +1,52 @@
+{
+  "model_id": "deepseek-r1",
+  "display_name": "DeepSeek R1",
+  "provider": "DeepSeek",
+  "tier": "standard",
+  "api": {
+    "endpoint": "https://api.deepseek.com/v1/chat/completions",
+    "model_string": "deepseek-reasoner",
+    "auth": "Bearer token (Authorization header)",
+    "format": "openai-chat"
+  },
+  "capabilities": {
+    "best_for": [
+      "deep step-by-step reasoning",
+      "math and logic problems",
+      "coding that benefits from reasoning",
+      "complex analysis at low cost",
+      "verification of other models' reasoning"
+    ],
+    "avoid": [
+      "tool use / function calling (weak to none)",
+      "multimodal tasks",
+      "latency-sensitive work (it thinks long)",
+      "short snap answers and high-volume simple tasks"
+    ],
+    "context_window": 64000,
+    "supports_multimodal": false,
+    "supports_tool_use": false,
+    "relative_speed": "slow",
+    "relative_cost": "low"
+  },
+  "prompting": {
+    "responds_best_to": "State the problem directly and zero-shot. It reasons natively, so do NOT add 'think step by step' or chain-of-thought scaffolding. Put instructions in the user message, not the system prompt.",
+    "avoid": "Few-shot examples and CoT instructions — both can DEGRADE its reasoning. Heavy system prompts are discouraged.",
+    "system_prompt_prefix": null,
+    "ideal_task_length": "brief",
+    "needs_examples": false
+  },
+  "quirks": [
+    "Reasons natively — adding 'think step by step' hurts rather than helps",
+    "Few-shot examples DEGRADE performance — always use zero-shot",
+    "Emits a long visible reasoning trace before the answer — strip it before using the result",
+    "Weak or no function calling — never route tool-use tasks here",
+    "Put task instructions in the user message; keep the system prompt minimal/empty"
+  ],
+  "handoff": {
+    "output_format_instruction": "Ask for the final answer clearly delimited (e.g. after a marker line) so the reasoning trace can be separated out.",
+    "evaluation_notes": "Separate the reasoning trace from the answer and evaluate only the final answer; the monologue is not the deliverable."
+  },
+  "last_updated": "2026-05-30",
+  "source": "claude-opus — initial dossier"
+}

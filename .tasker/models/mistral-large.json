@@ -1,0 +1,50 @@
+{
+  "model_id": "mistral-large",
+  "display_name": "Mistral Large",
+  "provider": "Mistral",
+  "tier": "standard",
+  "api": {
+    "endpoint": "https://api.mistral.ai/v1/chat/completions",
+    "model_string": "mistral-large-latest",
+    "auth": "Bearer token (Authorization header)",
+    "format": "openai-chat"
+  },
+  "capabilities": {
+    "best_for": [
+      "coding and refactoring",
+      "general reasoning",
+      "multilingual tasks (especially European languages)",
+      "structured output and function calling",
+      "drafting and analysis"
+    ],
+    "avoid": [
+      "multimodal tasks (text-only; use Pixtral)",
+      "the hardest frontier reasoning",
+      "very long-context beyond its window"
+    ],
+    "context_window": 128000,
+    "supports_multimodal": false,
+    "supports_tool_use": true,
+    "relative_speed": "medium",
+    "relative_cost": "medium"
+  },
+  "prompting": {
+    "responds_best_to": "Clear, structured instructions with an explicit format; concise system framing.",
+    "avoid": "Ambiguous prompts; relying on inferred format.",
+    "system_prompt_prefix": "Follow the requested output format exactly and be concise.",
+    "ideal_task_length": "medium",
+    "needs_examples": false
+  },
+  "quirks": [
+    "Strong multilingual ability, especially French and other European languages",
+    "Reliable function calling and JSON output",
+    "Solid European-hosted alternative when data residency matters",
+    "Text-only — route images to Pixtral"
+  ],
+  "handoff": {
+    "output_format_instruction": "Specify a strict schema or JSON mode; it adheres well.",
+    "evaluation_notes": "Check edge cases and that reasoning depth matched the task; generally clean structured output."
+  },
+  "last_updated": "2026-05-30",
+  "source": "claude-opus — initial dossier"
+}

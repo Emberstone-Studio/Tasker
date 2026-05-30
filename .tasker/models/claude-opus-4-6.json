@@ -1,0 +1,52 @@
+{
+  "model_id": "claude-opus-4-6",
+  "display_name": "Claude Opus 4.6",
+  "provider": "Anthropic",
+  "tier": "flagship",
+  "agent_model": "opus",
+  "api": {
+    "endpoint": "https://api.anthropic.com/v1/messages",
+    "model_string": "claude-opus-4-6",
+    "auth": "x-api-key header",
+    "format": "anthropic-messages"
+  },
+  "capabilities": {
+    "best_for": [
+      "complex multi-step reasoning",
+      "code architecture and large refactors",
+      "nuanced code review and final-pass editing",
+      "long-context synthesis across many files",
+      "agentic orchestration and planning",
+      "ambiguous tasks that need judgment"
+    ],
+    "avoid": [
+      "high-volume simple tasks where cost dominates",
+      "latency-sensitive interactive loops",
+      "trivial extraction or formatting better given to Haiku"
+    ],
+    "context_window": 200000,
+    "supports_multimodal": true,
+    "supports_tool_use": true,
+    "relative_speed": "slow",
+    "relative_cost": "high"
+  },
+  "prompting": {
+    "responds_best_to": "Clear goals plus context and constraints, then trust it to reason. Handles open-ended work without heavy step-by-step scaffolding.",
+    "avoid": "Over-constraining with rigid step lists suppresses its judgment; redundant repetition only wastes context.",
+    "system_prompt_prefix": null,
+    "ideal_task_length": "detailed",
+    "needs_examples": false
+  },
+  "quirks": [
+    "Flags flawed premises instead of complying blindly, so it surfaces bad task framing early",
+    "Strong self-critic; the best final reviewer in a multi-model pipeline",
+    "Can be verbose unless told to be concise",
+    "Follows explicit output-format instructions precisely"
+  ],
+  "handoff": {
+    "output_format_instruction": "Ask for explicit structure (fenced code blocks, headed sections); it adheres exactly.",
+    "evaluation_notes": "Output is reliable; main risk is over-thoroughness and scope expansion. Confirm it stayed within the requested task."
+  },
+  "last_updated": "2026-05-30",
+  "source": "claude-opus — initial dossier"
+}

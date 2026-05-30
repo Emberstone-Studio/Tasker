@@ -1,0 +1,49 @@
+{
+  "model_id": "gpt-5",
+  "display_name": "GPT-5",
+  "provider": "OpenAI",
+  "tier": "flagship",
+  "api": {
+    "endpoint": "https://api.openai.com/v1/chat/completions",
+    "model_string": "gpt-5",
+    "auth": "Bearer token (Authorization header)",
+    "format": "openai-chat"
+  },
+  "capabilities": {
+    "best_for": [
+      "strong general reasoning",
+      "coding and debugging",
+      "structured output and function calling",
+      "math and quantitative analysis",
+      "agentic tool use"
+    ],
+    "avoid": [
+      "tasks needing cautious judgment on ambiguity (prefer Opus)",
+      "very long-context editing where it can lose track of earlier detail"
+    ],
+    "context_window": 256000,
+    "supports_multimodal": true,
+    "supports_tool_use": true,
+    "relative_speed": "medium",
+    "relative_cost": "high"
+  },
+  "prompting": {
+    "responds_best_to": "Explicit, structured instructions with the output contract stated up front; responds well to role framing and clear step delineation.",
+    "avoid": "Vague prompts — it produces confident but generic output. Do not bury the key instruction mid-prompt.",
+    "system_prompt_prefix": "Reason step by step internally, then return the final answer in the exact requested format. Flag any part you are not confident about.",
+    "ideal_task_length": "detailed",
+    "needs_examples": false
+  },
+  "quirks": [
+    "Confident tone even when uncertain — ask it to mark low-confidence parts",
+    "Excellent at structured / function-call output",
+    "Over-formats with headers and lists unless told otherwise",
+    "Distinct house style from Claude — normalize before merging its output with Claude's"
+  ],
+  "handoff": {
+    "output_format_instruction": "Give a strict schema or JSON mode / function schema; adherence is strong.",
+    "evaluation_notes": "Cross-check that stated confidence matches reasoning and that the conclusion follows; watch for stylistic divergence from Claude outputs."
+  },
+  "last_updated": "2026-05-30",
+  "source": "claude-opus — initial dossier"
+}

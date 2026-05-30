@@ -1,0 +1,49 @@
+{
+  "model_id": "gpt-5-mini",
+  "display_name": "GPT-5 mini",
+  "provider": "OpenAI",
+  "tier": "fast",
+  "api": {
+    "endpoint": "https://api.openai.com/v1/chat/completions",
+    "model_string": "gpt-5-mini",
+    "auth": "Bearer token (Authorization header)",
+    "format": "openai-chat"
+  },
+  "capabilities": {
+    "best_for": [
+      "high-volume coding assists",
+      "extraction and classification",
+      "quick drafts",
+      "structured output at low cost",
+      "simple tool use"
+    ],
+    "avoid": [
+      "complex multi-step reasoning",
+      "long-context synthesis",
+      "subtle judgment calls"
+    ],
+    "context_window": 128000,
+    "supports_multimodal": true,
+    "supports_tool_use": true,
+    "relative_speed": "fast",
+    "relative_cost": "low"
+  },
+  "prompting": {
+    "responds_best_to": "Tightly scoped, single-purpose tasks with an explicit output format.",
+    "avoid": "Multi-step reasoning chains or open-ended prompts — decompose first.",
+    "system_prompt_prefix": "Be concise and return only the requested output in the specified format.",
+    "ideal_task_length": "brief",
+    "needs_examples": true
+  },
+  "quirks": [
+    "Good cheap workhorse for fan-out subtasks within the OpenAI stack",
+    "Loses coherence on long or multi-part tasks — decompose",
+    "Few-shot examples improve format adherence"
+  ],
+  "handoff": {
+    "output_format_instruction": "Demand strict format and supply one example.",
+    "evaluation_notes": "Verify completeness; re-route to GPT-5 or Sonnet if the task turned out to need reasoning."
+  },
+  "last_updated": "2026-05-30",
+  "source": "claude-opus — initial dossier"
+}

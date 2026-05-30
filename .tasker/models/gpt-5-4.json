@@ -1,0 +1,47 @@
+{
+  "model_id": "gpt-5-4",
+  "display_name": "GPT-5.4",
+  "provider": "OpenAI",
+  "tier": "standard",
+  "api": {
+    "endpoint": "https://api.openai.com/v1/chat/completions",
+    "model_string": "gpt-5-4",
+    "auth": "Bearer token (Authorization header)",
+    "format": "openai-chat"
+  },
+  "capabilities": {
+    "best_for": [
+      "general reasoning and coding at lower cost than flagship GPT-5",
+      "structured output and function calling",
+      "drafting and analysis",
+      "tool-use agents"
+    ],
+    "avoid": [
+      "the most demanding novel reasoning (prefer base GPT-5 or Opus)",
+      "tasks requiring verified, current factual precision"
+    ],
+    "context_window": null,
+    "supports_multimodal": true,
+    "supports_tool_use": true,
+    "relative_speed": "medium",
+    "relative_cost": "medium"
+  },
+  "prompting": {
+    "responds_best_to": "Explicit, structured instructions with the output format stated first; same prompting style as base GPT-5.",
+    "avoid": "Vague or open-ended prompts; do not bury the key instruction mid-prompt.",
+    "system_prompt_prefix": "Reason step by step internally, then return the final answer in the exact requested format. Flag any part you are not confident about.",
+    "ideal_task_length": "medium",
+    "needs_examples": false
+  },
+  "quirks": [
+    "UNVERIFIED model string at dossier creation — confirm availability before routing production traffic",
+    "Inherits GPT-5 behavior: confident tone, strong structured output, tends to over-format",
+    "Distinct house style from Claude — normalize before merging outputs"
+  ],
+  "handoff": {
+    "output_format_instruction": "Give a strict schema or JSON mode; adherence is expected to match base GPT-5.",
+    "evaluation_notes": "First confirm the endpoint accepts this model string; then evaluate as GPT-5 — check confidence vs. reasoning and stylistic divergence."
+  },
+  "last_updated": "2026-05-30",
+  "source": "claude-opus — initial dossier"
+}

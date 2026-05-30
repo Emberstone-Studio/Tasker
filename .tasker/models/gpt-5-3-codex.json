@@ -1,0 +1,50 @@
+{
+  "model_id": "gpt-5-3-codex",
+  "display_name": "GPT-5.3 Codex",
+  "provider": "OpenAI",
+  "tier": "standard",
+  "api": {
+    "endpoint": "https://api.openai.com/v1/chat/completions",
+    "model_string": "gpt-5-3-codex",
+    "auth": "Bearer token (Authorization header)",
+    "format": "openai-chat"
+  },
+  "capabilities": {
+    "best_for": [
+      "code generation",
+      "bug fixing and debugging",
+      "test writing",
+      "in-file completion and refactor",
+      "following existing codebase conventions"
+    ],
+    "avoid": [
+      "high-level architecture or product judgment",
+      "natural-language prose tasks",
+      "ambiguous or underspecified requirements"
+    ],
+    "context_window": null,
+    "supports_multimodal": false,
+    "supports_tool_use": true,
+    "relative_speed": "medium",
+    "relative_cost": "medium"
+  },
+  "prompting": {
+    "responds_best_to": "Precise coding tasks with file context, signatures, and explicit constraints; a sample of the target code style.",
+    "avoid": "Underspecified requirements — it fills gaps with plausible but possibly unwanted code.",
+    "system_prompt_prefix": "Produce only code that matches the existing conventions. Include no explanation unless explicitly asked.",
+    "ideal_task_length": "medium",
+    "needs_examples": true
+  },
+  "quirks": [
+    "UNVERIFIED model string at dossier creation — confirm availability before routing",
+    "Code-specialized; underperforms on natural-language reasoning",
+    "Strong at matching a provided code style — give it a sample",
+    "May omit edge-case handling unless explicitly prompted"
+  ],
+  "handoff": {
+    "output_format_instruction": "Ask for a unified diff or a complete file; specify the language and that prose should be omitted.",
+    "evaluation_notes": "Run or lint the code; check edge cases and that it did not invent APIs or signatures."
+  },
+  "last_updated": "2026-05-30",
+  "source": "claude-opus — initial dossier"
+}

@@ -1,4 +1,4 @@
-// tasker.js — Task queue manager for Claude Code agents
+﻿// tasker.js — Task queue manager for Claude Code agents
 // Run: node tasker.js
 
 "use strict";
@@ -35,6 +35,38 @@ const STATE_FILE = path.join(__dirname, "tasks.json");
 const PROJECT_DIR = path.dirname(__dirname);
 const PROJECT_NAME = path.basename(PROJECT_DIR);
 
+const TASKER_HOME = path.join(os.homedir(), ".tasker");
+const TASKER_SETTINGS_FILE = path.join(TASKER_HOME, "settings.json");
+const MODEL_REGISTRY_PRIMARY = path.join(TASKER_HOME, "models");
+const MODEL_REGISTRY_FALLBACK = path.join(__dirname, "models");
+
+function readTaskerSettings() {
+  try { return JSON.parse(fs.readFileSync(TASKER_SETTINGS_FILE, "utf8")); } catch { return {}; }
+}
+
+function writeTaskerSettings(data) {
+  fs.mkdirSync(TASKER_HOME, { recursive: true });
+  fs.writeFileSync(TASKER_SETTINGS_FILE, JSON.stringify(data, null, 2), "utf8");
+}
+
+function readModelRegistry() {
+  const seen = new Set();
+  const models = [];
+  for (const dir of [MODEL_REGISTRY_PRIMARY, MODEL_REGISTRY_FALLBACK]) {
+    let files;
+    try { files = fs.readdirSync(dir); } catch { continue; }
+    for (const f of files) {
+      if (!f.endsWith(".json") || seen.has(f)) continue;
+      seen.add(f);
+      try {
+        const d = JSON.parse(fs.readFileSync(path.join(dir, f), "utf8"));
+        if (d.model_id) models.push(d);
+      } catch {}
+    }
+  }
+  return models;
+}
+
 const DEFAULT_STATE = {
   tasks: [],
   scanInterval: 60,
@@ -44,24 +76,28 @@ const DEFAULT_STATE = {
       name: "Researcher",
       role: "You are a research agent. Your job is to find information, audit codebases, summarize findings, and answer questions with cited sources. Be thorough and precise. Prefer facts over speculation.",
       color: "#3b82f6",
+      model: "claude-sonnet-4-6",
     },
     {
       id: "agent-coder-default",
       name: "Coder",
       role: "You are a coding agent. Your job is to write, edit, debug, and explain code. Produce clean, working code with no unnecessary comments. Follow the existing conventions in the codebase.",
       color: "#10b981",
+      model: "claude-sonnet-4-6",
     },
     {
       id: "agent-reviewer-default",
       name: "Reviewer",
       role: "You are a review agent. Your job is to review output from other agents, flag issues, identify improvements, and provide actionable feedback. Be direct and specific.",
       color: "#f59e0b",
+      model: "claude-opus-4-6",
     },
     {
       id: "agent-writer-default",
       name: "Writer",
       role: "You are a writing agent. Your job is to write documentation, copy, summaries, and prose. Match the existing tone and style. Be clear and concise.",
       color: "#8b5cf6",
+      model: "claude-sonnet-4-6",
     },
   ],
   logs: [],
@@ -163,6 +199,122 @@ function broadcast(event) {
       clients.delete(res);
     }
   }
+}
+
+// ─── External model execution ────────────────────────────────────
+
+function loadDossier(modelId) {
+  for (const dir of [MODEL_REGISTRY_PRIMARY, MODEL_REGISTRY_FALLBACK]) {
+    const p = path.join(dir, `${modelId}.json`);
+    try { return JSON.parse(fs.readFileSync(p, "utf8")); } catch {}
+  }
+  return null;
+}
+
+async function executeExternal({ task_id, model_id, system_prompt, user_message, temperature, max_tokens }) {
+  const dossier = loadDossier(model_id);
+  if (!dossier) {
+    return [400, { error: `Model ${model_id} has no dossier. Run /tasker-add-model to onboard it.`, retryable: false }];
+  }
+
+  const settings = readTaskerSettings();
+  const conn = (settings.connected_models || {})[model_id];
+  if (!conn) {
+    return [400, { error: `Model ${model_id} is not connected. Open the Models tab and click Connect.`, retryable: false }];
+  }
+
+  const { api } = dossier;
+  const format = api.format;
+  const endpoint = conn.endpoint || api.endpoint;
+  const apiKey = conn.api_key;
+  const modelString = api.model_string;
+  const temp = typeof temperature === "number" ? temperature : 0.7;
+  const maxTok = typeof max_tokens === "number" ? max_tokens : 4096;
+
+  let url, headers, bodyObj;
+
+  if (format === "anthropic-messages") {
+    if (!endpoint) return [400, { error: `Model ${model_id} needs endpoint configuration. Open the Models tab to finish setup.`, retryable: false }];
+    url = endpoint;
+    headers = { "x-api-key": apiKey || "", "anthropic-version": "2023-06-01", "content-type": "application/json" };
+    bodyObj = { model: modelString, max_tokens: maxTok, system: system_prompt || "", messages: [{ role: "user", content: user_message }] };
+  } else if (format === "openai-chat") {
+    if (!endpoint) return [400, { error: `Model ${model_id} needs endpoint configuration. Open the Models tab to finish setup.`, retryable: false }];
+    url = endpoint;
+    headers = { "Authorization": `Bearer ${apiKey || ""}`, "content-type": "application/json" };
+    const msgs = [];
+    if (system_prompt) msgs.push({ role: "system", content: system_prompt });
+    msgs.push({ role: "user", content: user_message });
+    bodyObj = { model: modelString, temperature: temp, messages: msgs };
+  } else if (format === "gemini") {
+    if (!endpoint) return [400, { error: `Model ${model_id} needs endpoint configuration. Open the Models tab to finish setup.`, retryable: false }];
+    url = `${endpoint}?key=${encodeURIComponent(apiKey || "")}`;
+    headers = { "content-type": "application/json" };
+    const combined = system_prompt ? `${system_prompt}\n\n${user_message}` : user_message;
+    bodyObj = { contents: [{ parts: [{ text: combined }] }], generationConfig: { temperature: temp } };
+  } else if (format === "ollama") {
+    url = endpoint || "http://localhost:11434/api/chat";
+    headers = { "content-type": "application/json" };
+    const msgs = [];
+    if (system_prompt) msgs.push({ role: "system", content: system_prompt });
+    msgs.push({ role: "user", content: user_message });
+    bodyObj = { model: modelString, messages: msgs, stream: false, options: { temperature: temp } };
+  } else {
+    return [400, { error: `Unknown API format: ${format}`, retryable: false }];
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+  let response;
+  try {
+    response = await fetch(url, { method: "POST", headers, body: JSON.stringify(bodyObj), signal: controller.signal });
+  } catch (err) {
+    clearTimeout(timeoutId);
+    if (err.name === "AbortError") return [504, { error: "Request timed out", retryable: true }];
+    if (format === "ollama") return [503, { error: "Ollama not running — start with 'ollama serve'", retryable: false }];
+    return [503, { error: `Network error: ${err.message}`, retryable: true }];
+  }
+  clearTimeout(timeoutId);
+
+  if (response.status === 401 || response.status === 403) return [response.status, { error: "Authentication failed — check API key", retryable: false }];
+  if (response.status === 429) return [429, { error: "Rate limited", retryable: true }];
+  if (response.status >= 500) return [response.status, { error: "Provider error", retryable: true }];
+  if (!response.ok) return [response.status, { error: `HTTP ${response.status}`, retryable: false }];
+
+  let data;
+  try { data = await response.json(); } catch {
+    return [502, { error: "Unexpected response format", retryable: false }];
+  }
+
+  let output, tokens_used = null;
+  try {
+    if (format === "anthropic-messages") {
+      output = data.content[0].text;
+      tokens_used = ((data.usage?.input_tokens ?? 0) + (data.usage?.output_tokens ?? 0)) || null;
+    } else if (format === "openai-chat") {
+      output = data.choices[0].message.content;
+      tokens_used = data.usage?.total_tokens ?? null;
+    } else if (format === "gemini") {
+      output = data.candidates[0].content.parts[0].text;
+      tokens_used = data.usageMetadata?.totalTokenCount ?? null;
+    } else if (format === "ollama") {
+      output = data.message.content;
+      tokens_used = ((data.prompt_eval_count ?? 0) + (data.eval_count ?? 0)) || null;
+    }
+  } catch {
+    return [502, { error: "Unexpected response format", retryable: false }];
+  }
+
+  if (typeof output !== "string") return [502, { error: "Unexpected response format", retryable: false }];
+
+  let stripped = false;
+  if (model_id === "deepseek-r1") {
+    const cleaned = output.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
+    if (cleaned !== output) { output = cleaned; stripped = true; }
+  }
+
+  return [200, { output, model_id, tokens_used, ...(stripped && { stripped: true }) }];
 }
 
 // ─── HTTP helpers ─────────────────────────────────────────────────
@@ -558,6 +710,74 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (req.method === "GET" && req.url === "/models") {
+    const catalog = readModelRegistry();
+    const settings = readTaskerSettings();
+    const connected = settings.connected_models || {};
+    const result = catalog.map((m) => ({
+      ...m,
+      builtin: m.provider === "Anthropic",
+      connected: m.provider === "Anthropic" ? true : !!connected[m.model_id],
+      connection: connected[m.model_id] || null,
+    }));
+    return json(res, 200, result);
+  }
+
+  if (req.method === "POST" && req.url === "/models/connect") {
+    let raw = "";
+    req.on("data", (d) => (raw += d));
+    req.on("end", () => {
+      let body;
+      try { body = JSON.parse(raw); } catch { return json(res, 400, { error: "invalid JSON" }); }
+      const { model_id, api_key, endpoint, host } = body;
+      if (!model_id) return json(res, 400, { error: "model_id required" });
+      const settings = readTaskerSettings();
+      if (!settings.connected_models) settings.connected_models = {};
+      settings.connected_models[model_id] = {
+        api_key: api_key || null,
+        endpoint: endpoint || null,
+        host: host || null,
+        connected_at: new Date().toISOString().split("T")[0],
+      };
+      writeTaskerSettings(settings);
+      return json(res, 200, { ok: true });
+    });
+    return;
+  }
+
+  if (req.method === "POST" && req.url === "/models/disconnect") {
+    let raw = "";
+    req.on("data", (d) => (raw += d));
+    req.on("end", () => {
+      let body;
+      try { body = JSON.parse(raw); } catch { return json(res, 400, { error: "invalid JSON" }); }
+      const { model_id } = body;
+      if (!model_id) return json(res, 400, { error: "model_id required" });
+      const settings = readTaskerSettings();
+      if (settings.connected_models) delete settings.connected_models[model_id];
+      writeTaskerSettings(settings);
+      return json(res, 200, { ok: true });
+    });
+    return;
+  }
+
+  if (req.method === "POST" && req.url === "/execute-external") {
+    let raw = "";
+    req.on("data", (d) => (raw += d));
+    req.on("end", () => {
+      let body;
+      try { body = JSON.parse(raw); } catch {
+        return json(res, 400, { error: "invalid JSON", retryable: false });
+      }
+      const { task_id, model_id, system_prompt, user_message, temperature, max_tokens } = body;
+      if (!model_id) return json(res, 400, { error: "model_id required", retryable: false });
+      executeExternal({ task_id, model_id, system_prompt: system_prompt || "", user_message: user_message || "", temperature, max_tokens })
+        .then(([status, result]) => json(res, status, result))
+        .catch((err) => json(res, 500, { error: err.message, retryable: false }));
+    });
+    return;
+  }
+
   json(res, 404, { error: "Not found" });
 });
 
@@ -659,41 +879,95 @@ This also resumes the server if paused. Parse the JSON printed to stdout — it 
 - \`tasks\`: tasks that were ready and are now \`in_progress\`
 - \`agents\`: the full agents array (use these for agent roles)
 
-If \`tasks\` is empty, skip to step 3.
+If \`tasks\` is empty, you are done — stop here.
 
-## 2. Spawn one Agent per task (in parallel if multiple)
+## 2. Select the model and load its dossier (per claimed task)
 
-For each task, call the **Agent tool** with:
+Tasker keeps a **model registry**: one JSON dossier per model plus a \`ROUTING.md\` guide. Resolve the registry by checking these locations in order:
+
+- Primary: \`~/.tasker/models/\` (global — onboarded and user-added models live here)
+- Fallback: \`./.tasker/models/\` (seed dossiers shipped with the project)
+
+**2a. Load the routing guide once per scan** (not per task): read \`ROUTING.md\` for fast routing decisions.
+
+**2b. Determine each task's target model**, in priority order:
+1. \`task.model\` (a model_id) if set
+2. the resolved agent's \`model\` field if set
+3. otherwise no explicit model — use \`ROUTING.md\` to pick the best connected model, or fall back to the local Claude sub-agent path (Step 3)
+
+**2c. Load only that model's dossier** (\`<registry>/<model_id>.json\`). Never bulk-load dossiers.
+
+**2d. Gate checks** — read \`~/.tasker/settings.json\` for connection state. Run in order; on any failure do NOT delegate: reset task \`status\` to \`ready\`, append an \`activity\` note, POST full state to \`/state\` via \`node -e\`, then POST \`/pause-with-message\` and skip the task:
+
+- **Missing dossier** — message \`"Model <id> has no dossier. Run /tasker-add-model to onboard it."\`
+- **Unverified** — any \`quirks\` entry begins with \`UNVERIFIED\`: message \`"Model <id> dossier is unverified. Remove the UNVERIFIED marker in ~/.tasker/models/<id>.json once confirmed."\`
+- **Not connected** — \`connected_models[model_id]\` missing from \`~/.tasker/settings.json\`: message \`"Model <id> is not connected. Open the Models tab and click Connect."\`
+- **Needs configuration** — \`api.endpoint\` or \`api.auth\` is null and no endpoint in settings: message \`"Model <id> needs endpoint configuration. Open the Models tab to finish setup."\`
+
+Tasks that pass all gates carry their dossier into Step 3.
+
+## 3. Build the brief, apply the dossier, and delegate
+
+For each task that passed Step 2:
 
 - **description**: \`"[AgentName]: [task title]"\` — e.g. \`"Coder: Fix login bug"\`
-- **prompt**: A self-contained brief that includes:
+- **prompt** — a self-contained brief that includes:
   - The agent's **role** (copy it verbatim from the \`agents\` array returned above)
   - The task **title** and **description** (the agent's actual instructions)
   - Any user comments: activity entries with \`"type": "chat_user"\` from the task's \`activity\` array — include them verbatim under a **User comments** heading
   - The working directory: the current working directory
   - What to return: a concise summary of what was done, including any files changed
 
-For pipeline tasks use \`pipeline[pipeline_step]\` as the effective agent_id. For \`agent_id: null\`, pick the best agent based on task content (writing/docs → Writer, reviewing/auditing → Reviewer, research → Researcher, default → Coder).
+**Apply the dossier when constructing the brief** (when one was loaded):
+- Prepend \`prompting.system_prompt_prefix\` to the role text when non-null.
+- Add \`handoff.output_format_instruction\` verbatim as an explicit **Output format** line.
+- Shape the brief to \`prompting.ideal_task_length\` and \`prompting.responds_best_to\`; if \`prompting.needs_examples\` is true, include a short few-shot example.
 
-If multiple tasks are ready, spawn all agents in a **single message** as parallel Agent tool calls.
+**Delegation transport — two paths based on model provider:**
 
-When each agent finishes, inspect its result **before** updating state:
+**Path A — Claude model (\`provider: "Anthropic"\`) or no explicit model assigned:**
+→ Delegate via the **Agent tool**. If the dossier has an \`agent_model\` field (e.g. \`"haiku"\`, \`"sonnet"\`, \`"opus"\`), pass it as the \`model\` parameter in the Agent tool call. If no dossier was loaded or \`agent_model\` is absent, omit \`model\` to use the session default.
 
-**If the agent returned an error containing "rate limit", "usage limit", "overloaded", or "capacity":**
-- Reset the task's \`status\` back to \`"ready"\` in \`./.tasker/tasks.json\`
-- POST to \`http://localhost:$PORT/pause-with-message\` using \`node -e\` with body \`{"message": "Paused: Claude usage limit hit while working on \\"<task title>\\". Resume when ready."}\`
-- Stop immediately — do not update task state, do not call ScheduleWakeup.
+When the Agent returns, inspect the result **before** updating state:
+
+**If the result contains "rate limit", "usage limit", "overloaded", or "capacity":**
+- Reset the task's \`status\` to \`"ready"\`, append an activity note with the error
+- POST state to \`/state\` via \`node -e\`, then POST \`/pause-with-message\` with body \`{"message": "Paused: Claude usage limit hit while working on \\"<task title>\\". Resume when ready."}\`
+- Stop immediately — do not call ScheduleWakeup.
 
 **Otherwise (normal completion):**
-- Read the current \`./.tasker/tasks.json\`, then set the task's \`status\` to \`"in_review"\` and append to its \`activity\` array: \`{"timestamp": "<ISO timestamp>", "type": "output", "content": "<agent's summary>"}\`
-- POST the full patched state to \`http://localhost:$PORT/state\` using \`node -e\`
+- Read \`./.tasker/tasks.json\`, set \`status\` to \`"in_review"\`, append \`{"timestamp": "<ISO>", "type": "output", "content": "<agent summary>"}\` to \`activity\`
+- POST the full patched state to \`/state\` via \`node -e\`
+
+**Path B — External (non-Claude) model:**
+→ POST to \`http://localhost:$PORT/execute-external\` via \`node -e\`. Request body fields: \`task_id\` (string), \`model_id\` (string), \`system_prompt\` (assembled role + dossier prefix), \`user_message\` (task brief), \`temperature\` (0.7), \`max_tokens\` (null). Response on success: \`{ output, model_id, tokens_used, stripped? }\`. On failure: \`{ error, retryable }\`.
+
+**Handling external model responses:**
+
+- **Retryable error (\`retryable: true\` — rate limited, timeout, provider error):**
+  - Reset \`status\` to \`"ready"\`, append \`{"type": "error", "content": "<error message>"}\` to \`activity\`
+  - POST state to \`/state\` via \`node -e\`, then POST \`/pause-with-message\` with body \`{"message": "Paused: <error> while working on \\"<task title>\\". Resume when ready."}\`
+  - Stop immediately.
+
+- **Non-retryable error (\`retryable: false\` — auth failure, bad config):**
+  - Reset \`status\` to \`"ready"\`, append \`{"type": "error", "content": "<error message>"}\` to \`activity\`
+  - POST state to \`/state\` via \`node -e\`, then POST \`/pause-with-message\` with body \`{"message": "Paused: <error> while working on \\"<task title>\\". Fix the issue and resume."}\`
+  - Stop immediately.
+
+- **Success:**
+  - Build an attribution header: start with \`**<dossier.display_name>**\`; if \`tokens_used\` is non-null append \`(tokens used: <n>)\`; if \`stripped: true\` append \`— reasoning trace stripped\`.
+  - Append to \`activity\`: \`{"timestamp": "<ISO>", "type": "output", "content": "<attribution>\\n---\\n<output>"}\`
+  - Set \`status\` to \`"in_review"\`, POST full patched state to \`/state\` via \`node -e\`
+
+For pipeline tasks use \`pipeline[pipeline_step]\` as the effective agent_id. For \`agent_id: null\`, pick the best agent based on task content (writing/docs → Writer, reviewing/auditing → Reviewer, research → Researcher, default → Coder). Auto tasks always use Path A unless a non-Claude connected model is found via routing.
+
+If multiple tasks are ready, spawn all Path A (Claude) agents in a **single message** as parallel Agent tool calls. Path B (external) tasks must be executed sequentially — one \`/execute-external\` call at a time — to avoid interleaving state writes.
 
 The server scan loop restarts automatically — no ScheduleWakeup needed.
 
 ---
 
 **Important**: You are the coordinator. Never execute task work yourself — always delegate via Agent.`;
-
   const pauseContent = `---
 description: Pause the Tasker scan loop
 ---
@@ -733,6 +1007,53 @@ r.on('error',e=>console.log('err:',e.message));r.end();
     fs.writeFileSync(path.join(commandsDir, "tasker-stop.md"), stopContent, "utf8");
     console.log(`[tasker] Skill installed: /tasker-stop`);
     try { fs.unlinkSync(path.join(commandsDir, "tasker-watch.md")); } catch (e) {}
+    // Install tasker-add-model only if not already present (allows user customization)
+    const addModelPath = path.join(commandsDir, "tasker-add-model.md");
+    if (!fs.existsSync(addModelPath)) {
+      const b = "`";
+      const addModelContent = `---
+description: Onboard a new model into Tasker's registry by interviewing it and saving a dossier
+---
+
+Onboard a model that isn't in Tasker's registry yet. Interview the model, normalize its self-report into the standard dossier schema, and save to ${b}~/.tasker/models/<model_id>.json${b}. After this, /tasker-scan can route tasks to it.
+
+${b}$ARGUMENTS${b} may contain the model id and/or connection details. Ask the user for anything missing.
+
+## 1. Gather connection details
+
+Collect: ${b}model_id${b}, ${b}display_name${b}, ${b}provider${b}, ${b}api.endpoint${b}, ${b}api.model_string${b}, ${b}api.format${b} (anthropic-messages / openai-chat / gemini), ${b}api.auth${b}. If endpoint/auth unavailable, save as null — the scan skill gates as "needs configuration" until filled in.
+
+## 2. Interview the model
+
+Send this single user message (empty system prompt):
+
+> You are being registered in a model-orchestration registry. Reply with JSON only, no prose. Report honestly: ${b}best_for${b} (3–6 task types), ${b}avoid${b} (3–6), ${b}context_window${b} (int), ${b}supports_multimodal${b} (bool), ${b}supports_tool_use${b} (bool), ${b}relative_speed${b} (fast/medium/slow), ${b}relative_cost${b} (low/medium/high), ${b}responds_best_to${b} (1–2 sentences), ${b}prompt_avoid${b} (1–2 sentences), ${b}needs_examples${b} (bool), ${b}ideal_task_length${b} (brief/medium/detailed), ${b}quirks${b} (2–5 actionable items), ${b}output_format_instruction${b}. Keys exactly as named.
+
+Use ${b}node -e${b} to POST to the provider's API. Read the API key from Tasker Settings or from the user. Stop and report if the call fails.
+
+## 3. Normalize into the dossier schema
+
+Map the self-report into the schema used by seed dossiers (see any file in ${b}~/.tasker/models/${b}):
+- Fill the ${b}api${b} block from Step 1 (null where unavailable)
+- Set ${b}tier${b} (flagship/standard/fast) from cost/speed
+- ${b}prompting.system_prompt_prefix${b}: derive the most useful prefix; null if nothing clearly helps
+- Rewrite ${b}quirks${b}, ${b}handoff.output_format_instruction${b}, and ${b}handoff.evaluation_notes${b} from an orchestrator's perspective
+- Set ${b}"source": "onboarding — model self-report"${b}
+- First ${b}quirks${b} entry must begin with ${b}UNVERIFIED${b} — scan will gate the model until confirmed
+- ${b}last_updated${b}: today's date (YYYY-MM-DD)
+
+## 4. Save and register
+
+- Write ${b}~/.tasker/models/<model_id>.json${b} (create dir if missing)
+- Read board state, append ${b}{ "id": "<model_id>", "display_name": ..., "provider": ... }${b} to the ${b}models${b} array, POST to ${b}/state${b}
+
+## 5. Report to the user
+
+Confirm: dossier saved, registered, marked UNVERIFIED until confirmed. Show ${b}tier${b}, ${b}best_for${b}, top ${b}quirks${b}, and any null API fields still needing configuration.
+`;
+      fs.writeFileSync(addModelPath, addModelContent, "utf8");
+      console.log(`[tasker] Skill installed: /tasker-add-model`);
+    }
   } catch (err) {
     console.warn(`[tasker] Could not install skills: ${err.message}`);
   }

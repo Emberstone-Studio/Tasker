@@ -1,0 +1,50 @@
+{
+  "model_id": "gemini-2-5-pro",
+  "display_name": "Gemini 2.5 Pro",
+  "provider": "Google",
+  "tier": "standard",
+  "api": {
+    "endpoint": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent",
+    "model_string": "gemini-2.5-pro",
+    "auth": "API key (x-goog-api-key header or ?key= query param)",
+    "format": "gemini"
+  },
+  "capabilities": {
+    "best_for": [
+      "long-context document analysis",
+      "multimodal reasoning",
+      "research synthesis",
+      "drafting over large inputs",
+      "data extraction from big documents"
+    ],
+    "avoid": [
+      "strict-format tasks without examples",
+      "delicate code refactors where correctness is critical",
+      "tasks needing tight instruction adherence"
+    ],
+    "context_window": 1000000,
+    "supports_multimodal": true,
+    "supports_tool_use": true,
+    "relative_speed": "medium",
+    "relative_cost": "medium"
+  },
+  "prompting": {
+    "responds_best_to": "Explicit instructions with the format spelled out and an example; benefits from restating key constraints in long prompts.",
+    "avoid": "Assuming it will infer a strict format — over-specify.",
+    "system_prompt_prefix": "Follow the requested output format exactly; be concise and add no extra commentary.",
+    "ideal_task_length": "detailed",
+    "needs_examples": true
+  },
+  "quirks": [
+    "Verified, reliable predecessor to the Gemini 3 line — safe default for Google-stack long-context work",
+    "Strong long-context and multimodal at moderate cost",
+    "Looser instruction-following — over-specify and give examples",
+    "Hedges and over-explains — ask for directness"
+  ],
+  "handoff": {
+    "output_format_instruction": "Demand strict format with an example, restated at the end of long prompts.",
+    "evaluation_notes": "Tighten verbosity, confirm format adherence, and fact-check specifics; good for drafts Claude refines."
+  },
+  "last_updated": "2026-05-30",
+  "source": "claude-opus — initial dossier"
+}

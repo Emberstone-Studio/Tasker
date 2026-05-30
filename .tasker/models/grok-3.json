@@ -1,0 +1,49 @@
+{
+  "model_id": "grok-3",
+  "display_name": "Grok 3",
+  "provider": "xAI",
+  "tier": "flagship",
+  "api": {
+    "endpoint": "https://api.x.ai/v1/chat/completions",
+    "model_string": "grok-3",
+    "auth": "Bearer token (Authorization header)",
+    "format": "openai-chat"
+  },
+  "capabilities": {
+    "best_for": [
+      "general reasoning and analysis",
+      "current-events and real-time-flavored questions",
+      "coding and debugging",
+      "math",
+      "conversational drafting"
+    ],
+    "avoid": [
+      "safety-sensitive or tone-critical output without tight constraints",
+      "strict structured output without examples (less battle-tested than GPT/Claude)",
+      "tasks needing verified neutrality"
+    ],
+    "context_window": 131072,
+    "supports_multimodal": true,
+    "supports_tool_use": true,
+    "relative_speed": "medium",
+    "relative_cost": "medium"
+  },
+  "prompting": {
+    "responds_best_to": "Direct, conversational instructions with the goal stated plainly; responds well to explicit tone and format constraints.",
+    "avoid": "Leaving tone unconstrained — its default voice skews irreverent; vague format requests.",
+    "system_prompt_prefix": "Respond directly and professionally, and return output in the exact requested format.",
+    "ideal_task_length": "medium",
+    "needs_examples": true
+  },
+  "quirks": [
+    "Default tone skews casual/irreverent — constrain tone explicitly for professional output",
+    "OpenAI-compatible API, so reuse the openai-chat path",
+    "Less proven on strict structured output than GPT or Claude — give an example and validate"
+  ],
+  "handoff": {
+    "output_format_instruction": "Specify a strict format with an example; request no editorializing.",
+    "evaluation_notes": "Check tone, format adherence, and factual claims; normalize voice before merging with other models' output."
+  },
+  "last_updated": "2026-05-30",
+  "source": "claude-opus — initial dossier"
+}

@@ -1,0 +1,52 @@
+{
+  "model_id": "claude-haiku-4-5",
+  "display_name": "Claude Haiku 4.5",
+  "provider": "Anthropic",
+  "tier": "fast",
+  "agent_model": "haiku",
+  "api": {
+    "endpoint": "https://api.anthropic.com/v1/messages",
+    "model_string": "claude-haiku-4-5-20251001",
+    "auth": "x-api-key header",
+    "format": "anthropic-messages"
+  },
+  "capabilities": {
+    "best_for": [
+      "classification and routing",
+      "simple extraction and transformation",
+      "short summaries",
+      "high-volume batch / fan-out subtasks",
+      "quick lookups",
+      "format conversion"
+    ],
+    "avoid": [
+      "multi-step reasoning chains",
+      "architecture decisions",
+      "nuanced code refactoring",
+      "long-context synthesis"
+    ],
+    "context_window": 200000,
+    "supports_multimodal": true,
+    "supports_tool_use": true,
+    "relative_speed": "fast",
+    "relative_cost": "low"
+  },
+  "prompting": {
+    "responds_best_to": "Narrow, single-purpose prompts with an explicit output format.",
+    "avoid": "Multi-part or open-ended tasks — decompose them first.",
+    "system_prompt_prefix": "Be concise and follow the requested output format exactly.",
+    "ideal_task_length": "brief",
+    "needs_examples": true
+  },
+  "quirks": [
+    "Fast and cheap; ideal for fanning out atomic subtasks",
+    "Degrades when reasoning must be chained — keep each call atomic",
+    "Few-shot examples noticeably improve consistency"
+  ],
+  "handoff": {
+    "output_format_instruction": "Demand strict, machine-parseable output (JSON or fixed labels) and supply one example.",
+    "evaluation_notes": "Verify completeness and that it did not oversimplify; re-route to Sonnet if real reasoning was required."
+  },
+  "last_updated": "2026-05-30",
+  "source": "claude-opus — initial dossier"
+}

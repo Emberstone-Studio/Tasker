@@ -1,0 +1,50 @@
+{
+  "model_id": "gemini-3-1-pro",
+  "display_name": "Gemini 3.1 Pro",
+  "provider": "Google",
+  "tier": "flagship",
+  "api": {
+    "endpoint": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-1-pro:generateContent",
+    "model_string": "gemini-3-1-pro",
+    "auth": "API key (x-goog-api-key header or ?key= query param)",
+    "format": "gemini"
+  },
+  "capabilities": {
+    "best_for": [
+      "multimodal reasoning over image, video, and audio",
+      "very long-context synthesis",
+      "large-document and codebase analysis",
+      "broad knowledge retrieval",
+      "first-draft generation over large inputs"
+    ],
+    "avoid": [
+      "tasks needing precise strict-format adherence without examples",
+      "delicate code refactoring where correctness is critical"
+    ],
+    "context_window": 1000000,
+    "supports_multimodal": true,
+    "supports_tool_use": true,
+    "relative_speed": "medium",
+    "relative_cost": "high"
+  },
+  "prompting": {
+    "responds_best_to": "Clear, explicit instructions with the format spelled out; in long prompts, restate key constraints at both the start and the end.",
+    "avoid": "Relying on it to infer a strict output format — be explicit and show an example.",
+    "system_prompt_prefix": "Follow the requested output format exactly and add no extra commentary.",
+    "ideal_task_length": "detailed",
+    "needs_examples": true
+  },
+  "quirks": [
+    "UNVERIFIED version string at dossier creation — confirm availability before routing",
+    "Best-in-class long-context and multimodal handling",
+    "Looser instruction-following than Claude or GPT — over-specify format and give an example",
+    "Tends to verbosity and hedging — ask for directness",
+    "Strong as a first-draft generator that Claude then edits"
+  ],
+  "handoff": {
+    "output_format_instruction": "Demand strict format with an example, and restate the format at the end of the prompt.",
+    "evaluation_notes": "Tighten verbosity, confirm it followed the format, and fact-check specifics; ideal for drafts Opus refines."
+  },
+  "last_updated": "2026-05-30",
+  "source": "claude-opus — initial dossier"
+}

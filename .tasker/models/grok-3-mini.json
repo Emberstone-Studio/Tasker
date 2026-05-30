@@ -1,0 +1,49 @@
+{
+  "model_id": "grok-3-mini",
+  "display_name": "Grok 3 mini",
+  "provider": "xAI",
+  "tier": "fast",
+  "api": {
+    "endpoint": "https://api.x.ai/v1/chat/completions",
+    "model_string": "grok-3-mini",
+    "auth": "Bearer token (Authorization header)",
+    "format": "openai-chat"
+  },
+  "capabilities": {
+    "best_for": [
+      "cost-efficient reasoning",
+      "math and logic",
+      "lightweight coding",
+      "classification and extraction",
+      "quick drafts"
+    ],
+    "avoid": [
+      "complex long-context synthesis",
+      "format-critical output without examples",
+      "nuanced judgment calls"
+    ],
+    "context_window": 131072,
+    "supports_multimodal": false,
+    "supports_tool_use": true,
+    "relative_speed": "fast",
+    "relative_cost": "low"
+  },
+  "prompting": {
+    "responds_best_to": "Tightly scoped tasks with explicit format; direct phrasing.",
+    "avoid": "Open-ended multi-part prompts — decompose first.",
+    "system_prompt_prefix": "Be concise and return only the requested output in the specified format.",
+    "ideal_task_length": "brief",
+    "needs_examples": true
+  },
+  "quirks": [
+    "Reasoning-capable but lightweight — good cheap workhorse in the xAI stack",
+    "Same casual default tone as Grok 3 — constrain it",
+    "Keep calls atomic; coherence drops on long multi-part tasks"
+  ],
+  "handoff": {
+    "output_format_instruction": "Demand strict format and supply one example.",
+    "evaluation_notes": "Verify completeness; escalate to Grok 3 or a flagship if the task needed depth."
+  },
+  "last_updated": "2026-05-30",
+  "source": "claude-opus — initial dossier"
+}

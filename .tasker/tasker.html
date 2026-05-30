@@ -73,6 +73,13 @@
         --warning: #f59e0b;
         --warn-bg: rgba(245, 158, 11, 0.1);
         --warn-text: #f59e0b;
+        --provider-anthropic: #c97550;
+        --provider-openai: #10a37f;
+        --provider-google: #4285f4;
+        --provider-xai: #aaaaaa;
+        --provider-meta: #e07b39;
+        --provider-mistral: #7b83d4;
+        --provider-deepseek: #e05252;
         --font-mono: "JetBrains Mono", "Fira Mono", "Courier New", monospace;
         --font-ui:
           system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -586,6 +593,223 @@
       .agent-card-actions {
         display: flex;
         gap: 6px;
+        align-items: center;
+      }
+
+      /* ─── MODEL BADGE ──────────────────────────────────────── */
+      .model-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        font-size: 10px;
+        font-weight: 600;
+        padding: 2px 6px;
+        border-radius: 3px;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        font-family: var(--font-ui);
+        background: var(--bg-badge);
+        border: 1px solid var(--border);
+        color: var(--text-secondary);
+        margin-left: auto;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+      .model-badge::before {
+        content: '';
+        display: inline-block;
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: currentColor;
+        flex-shrink: 0;
+      }
+      .model-badge.provider-anthropic { color: var(--provider-anthropic); }
+      .model-badge.provider-openai    { color: var(--provider-openai); }
+      .model-badge.provider-google    { color: var(--provider-google); }
+      .model-badge.provider-xai       { color: var(--provider-xai); }
+      .model-badge.provider-meta      { color: var(--provider-meta); }
+      .model-badge.provider-mistral   { color: var(--provider-mistral); }
+      .model-badge.provider-deepseek  { color: var(--provider-deepseek); }
+
+      .auto-badge {
+        font-size: 11px;
+        opacity: 0.6;
+        margin-left: 2px;
+      }
+
+      /* ─── MODELS PANEL ─────────────────────────────────────── */
+      #models-panel {
+        overflow-y: auto;
+        padding: 20px;
+      }
+
+      .models-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+        gap: 12px;
+      }
+
+      .model-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        padding: 14px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        transition: border-color 0.15s;
+      }
+      .model-card.connected {
+        border-color: #2a3f2a;
+      }
+
+      .model-card-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .model-display-name {
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1.3;
+      }
+      .model-provider-label {
+        font-size: 11px;
+        color: var(--text-secondary);
+        margin-top: 2px;
+      }
+      .model-provider-label.provider-anthropic { color: var(--provider-anthropic); }
+      .model-provider-label.provider-openai    { color: var(--provider-openai); }
+      .model-provider-label.provider-google    { color: var(--provider-google); }
+      .model-provider-label.provider-xai       { color: var(--provider-xai); }
+      .model-provider-label.provider-meta      { color: var(--provider-meta); }
+      .model-provider-label.provider-mistral   { color: var(--provider-mistral); }
+      .model-provider-label.provider-deepseek  { color: var(--provider-deepseek); }
+
+      .tier-badge {
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        padding: 2px 6px;
+        border-radius: 3px;
+        background: var(--bg-badge);
+        white-space: nowrap;
+        flex-shrink: 0;
+        font-family: var(--font-ui);
+      }
+      .tier-badge.flagship { color: var(--provider-anthropic); }
+      .tier-badge.standard { color: var(--accent); }
+      .tier-badge.fast     { color: var(--success); }
+
+      .model-warning-badges {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .badge-unverified {
+        font-size: 10px;
+        padding: 2px 6px;
+        background: rgba(245,158,11,0.12);
+        color: var(--warning);
+        border: 1px solid rgba(245,158,11,0.3);
+        border-radius: 3px;
+        font-family: var(--font-ui);
+      }
+      .badge-setup-required {
+        font-size: 10px;
+        padding: 2px 6px;
+        background: rgba(88,101,242,0.12);
+        color: var(--accent);
+        border: 1px solid rgba(88,101,242,0.3);
+        border-radius: 3px;
+        font-family: var(--font-ui);
+      }
+      .badge-connected-pill {
+        font-size: 10px;
+        padding: 2px 6px;
+        background: rgba(16,185,129,0.12);
+        color: var(--success);
+        border: 1px solid rgba(16,185,129,0.3);
+        border-radius: 3px;
+        font-family: var(--font-ui);
+      }
+
+      .model-best-for {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        flex: 1;
+      }
+      .model-best-for li {
+        font-size: 11px;
+        color: var(--text-secondary);
+        padding-left: 10px;
+        position: relative;
+        line-height: 1.4;
+      }
+      .model-best-for li::before {
+        content: '·';
+        position: absolute;
+        left: 2px;
+        color: var(--text-tertiary);
+      }
+
+      .model-card-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-top: auto;
+      }
+      .btn-model-connect {
+        background: var(--accent);
+        border: none;
+        color: #fff;
+        font-size: 12px;
+        font-family: var(--font-ui);
+        font-weight: 500;
+        padding: 5px 12px;
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+      .btn-model-connect:hover { background: var(--accent-hover); }
+      .btn-model-disconnect {
+        background: none;
+        border: 1px solid var(--border);
+        color: var(--text-secondary);
+        font-size: 12px;
+        font-family: var(--font-ui);
+        padding: 5px 12px;
+        cursor: pointer;
+        transition: border-color 0.15s;
+      }
+      .btn-model-disconnect:hover { border-color: var(--danger); color: var(--danger); }
+
+      .connect-panel {
+        border-top: 1px solid var(--border);
+        padding-top: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .connect-panel.hidden { display: none; }
+      .connect-warning {
+        font-size: 10px;
+        color: var(--warning);
+        line-height: 1.4;
+        font-family: var(--font-ui);
+      }
+      .connect-panel-footer {
+        display: flex;
+        gap: 6px;
+        justify-content: flex-end;
+      }
+      .models-empty {
+        color: var(--text-secondary);
+        font-size: 13px;
       }
 
       .chat-panel-msg.system .chat-panel-bubble {
@@ -1520,6 +1744,9 @@
           <button class="tab-btn" onclick="switchTab('agents')" id="tab-agents">
             Agents
           </button>
+          <button class="tab-btn" onclick="switchTab('models')" id="tab-models">
+            Models
+          </button>
         </div>
         <div id="topbar-center"></div>
         <div id="topbar-right">
@@ -1534,7 +1761,7 @@
             title="Resume scan loop"
             style="display: none"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polygon points="5 3 19 12 5 21 5 3"/>
             </svg>
           </button>
@@ -1665,6 +1892,16 @@
             </div>
           </div>
 
+          <!-- MODELS -->
+          <div id="models-panel" class="tab-panel">
+            <div id="models-panel-inner">
+              <div class="panel-header">
+                <div class="panel-title">Models</div>
+              </div>
+              <div id="models-catalog" class="models-grid"></div>
+            </div>
+          </div>
+
         </div>
 
         <!-- CHAT PANEL (slide-in from right) -->
@@ -1750,6 +1987,13 @@
               rows="5"
               placeholder="You are a..."
             ></textarea>
+          </div>
+          <div class="form-group" id="ag-model-group" style="display:none">
+            <label class="form-label">Model</label>
+            <select class="form-select" id="ag-model">
+              <option value="">Claude (default)</option>
+            </select>
+            <div class="form-hint" style="margin-top:4px">Anthropic models are built-in. Connect external models in the Models tab.</div>
           </div>
           <div class="form-group">
             <label class="form-label">Color</label>
@@ -2052,7 +2296,12 @@
           </div>
           <div class="form-group">
             <label class="form-label">Agent</label>
-            <select class="form-select" id="at-agent" title="Agent"></select>
+            <select class="form-select" id="at-agent" title="Agent" onchange="updateTaskModelVisibility('at'); updateAgentHint('at')"></select>
+            <div class="form-hint" id="at-agent-hint" style="margin-top:4px"></div>
+          </div>
+          <div class="form-group" id="at-model-group">
+            <label class="form-label">Model</label>
+            <select class="form-select" id="at-model"></select>
           </div>
           <div class="form-group">
             <label class="form-label">Pipeline steps (optional)</label>
@@ -2114,6 +2363,7 @@
       let dragSrcId = null;
 
       let _persistTimer = null;
+      let catalogModels = [];
 
       function loadState() {
         // Fallback: embedded JSON in the file (used when server not running)
@@ -2627,6 +2877,7 @@
         document.getElementById(tab + "-panel").classList.add("active");
         if (tab === "agents") renderAgents();
         if (tab === "tasks") renderBoard();
+        if (tab === "models") fetchModels();
       }
 
       function toggleChatPanel() {
@@ -2687,6 +2938,7 @@
             ? "var(--accent)"
             : "#333";
         const priorityClass = task.priority || "medium";
+        const isAuto = !effectiveAgentId && !(task.pipeline && task.pipeline.length > 0);
         const agentName = agent
           ? agent.name
           : task.agent_id === null
@@ -2823,6 +3075,9 @@
         const body = document.getElementById("task-modal-body");
         const footer = document.getElementById("task-modal-footer");
         const agentOptions = buildAgentOptions(task.agent_id);
+        const isAuto = !task.agent_id;
+        const modelOptions = buildTaskModelOptions(task.model || "");
+        const agentHint = getAgentHintText(task.agent_id);
         const existingPipeline = task.pipeline || [];
         const pipelineStepsHTML = existingPipeline
           .map((agId) => buildPipelineStepRow(agId))
@@ -2838,7 +3093,12 @@
     </div>
     <div class="form-group">
       <label class="form-label">Agent</label>
-      <select class="form-select" id="td-agent">${agentOptions}</select>
+      <select class="form-select" id="td-agent" onchange="updateTaskModelVisibility('td'); updateAgentHint('td')">${agentOptions}</select>
+      <div class="form-hint" id="td-agent-hint" style="margin-top:4px">${agentHint}</div>
+    </div>
+    <div class="form-group" id="td-model-group" style="${isAuto ? "" : "display:none"}">
+      <label class="form-label">Model</label>
+      <select class="form-select" id="td-model">${modelOptions}</select>
     </div>
     <div class="form-group">
       <label class="form-label">Pipeline steps (optional)</label>
@@ -2904,6 +3164,11 @@
           document.getElementById("td-title").value.trim() || task.title;
         task.description = document.getElementById("td-desc").value.trim();
         task.agent_id = document.getElementById("td-agent").value || null;
+        if (!task.agent_id) {
+          task.model = document.getElementById("td-model")?.value || null;
+        } else {
+          delete task.model;
+        }
         task.pipeline = collectPipelineSteps("td-pipeline-steps");
         if (task.pipeline.length === 0) {
           delete task.pipeline;
@@ -3058,6 +3323,9 @@
             }
           });
         populateAgentSelect("at-agent", null);
+        populateTaskModelSelect("at", null);
+        updateTaskModelVisibility("at");
+        updateAgentHint("at");
         document.getElementById("at-pipeline-steps").innerHTML = "";
         openModal("addtask-modal");
       }
@@ -3076,11 +3344,13 @@
         const pri = document.querySelector('input[name="at-priority"]:checked');
         const now = new Date().toISOString();
         const pipeline = collectPipelineSteps("at-pipeline-steps");
+        const agentId = document.getElementById("at-agent").value || null;
+        const taskModel = !agentId ? (document.getElementById("at-model")?.value || null) : null;
         const task = {
           id: uid(),
           title,
           description: document.getElementById("at-desc").value.trim(),
-          agent_id: document.getElementById("at-agent").value || null,
+          agent_id: agentId,
           priority: pri ? pri.value : "medium",
           status: addTaskStatus,
           created_at: now,
@@ -3089,6 +3359,7 @@
             { timestamp: now, type: "created", content: "Task created" },
           ],
         };
+        if (taskModel) task.model = taskModel;
         if (pipeline.length > 0) {
           task.pipeline = pipeline;
           task.pipeline_step = 0;
@@ -3123,11 +3394,13 @@
         }
         grid.innerHTML = state.agents
           .map((a) => {
+            const modelBadge = a.model ? buildModelBadge(a.model) : "";
             return `
       <div class="agent-card" style="border-left-color:${a.color}">
         <div class="agent-card-top">
           <div class="agent-color-swatch" style="background:${a.color}"></div>
           <div class="agent-name">${escHtml(a.name)}</div>
+          ${modelBadge}
         </div>
         <div class="agent-role-preview">${escHtml(a.role)}</div>
         <div class="agent-card-actions">
@@ -3151,7 +3424,65 @@
         const col = ag ? ag.color : "#5865f2";
         document.getElementById("ag-color").value = col;
         updateColorPresets(col);
+        populateAgentModelSelect(ag ? (ag.model || "") : "");
         openModal("agent-modal");
+      }
+
+      function getAgentHintText(agentId) {
+        if (!agentId) return "Team lead picks the best available model";
+        const agent = state.agents.find((a) => a.id === agentId);
+        if (!agent) return "";
+        return agent.model ? `Uses ${getModelDisplayName(agent.model)}` : "Uses auto routing";
+      }
+
+      function updateAgentHint(prefix) {
+        const sel = document.getElementById(`${prefix}-agent`);
+        const hint = document.getElementById(`${prefix}-agent-hint`);
+        if (!sel || !hint) return;
+        hint.textContent = getAgentHintText(sel.value || null);
+      }
+
+      function buildTaskModelOptions(selectedModel) {
+        const available = catalogModels.filter((m) => m.connected || m.builtin);
+        return [
+          `<option value="" ${!selectedModel ? "selected" : ""}>Auto</option>`,
+          ...available.map((m) =>
+            `<option value="${m.model_id}" ${m.model_id === selectedModel ? "selected" : ""}>${escHtml(m.display_name)}</option>`
+          ),
+        ].join("");
+      }
+
+      function populateTaskModelSelect(prefix, selectedModel) {
+        const sel = document.getElementById(`${prefix}-model`);
+        if (sel) sel.innerHTML = buildTaskModelOptions(selectedModel || "");
+      }
+
+      function updateTaskModelVisibility(prefix) {
+        const agentSel = document.getElementById(`${prefix}-agent`);
+        const modelGroup = document.getElementById(`${prefix}-model-group`);
+        if (!agentSel || !modelGroup) return;
+        const isAuto = !agentSel.value;
+        modelGroup.style.display = isAuto ? "" : "none";
+        if (isAuto) populateTaskModelSelect(prefix, null);
+      }
+
+      function populateAgentModelSelect(selectedModel) {
+        const sel = document.getElementById("ag-model");
+        const grp = document.getElementById("ag-model-group");
+        if (!sel || !grp) return;
+        const connected = catalogModels.filter((m) => m.connected);
+        if (connected.length === 0) {
+          grp.style.display = "none";
+          return;
+        }
+        grp.style.display = "";
+        sel.innerHTML = [
+          `<option value="" ${!selectedModel ? "selected" : ""}>Auto</option>`,
+          ...connected.map(
+            (m) =>
+              `<option value="${m.model_id}" ${m.model_id === selectedModel ? "selected" : ""}>${escHtml(m.display_name)}</option>`,
+          ),
+        ].join("");
       }
 
       function setAgentColor(hex) {
@@ -3171,10 +3502,12 @@
           alert("Please enter an agent name.");
           return;
         }
+        const modelSel = document.getElementById("ag-model");
         const data = {
           name,
           role: document.getElementById("ag-role").value.trim(),
           color: document.getElementById("ag-color").value,
+          model: modelSel ? (modelSel.value || null) : null,
         };
         if (editingAgentId) {
           const idx = state.agents.findIndex((a) => a.id === editingAgentId);
@@ -3454,12 +3787,217 @@
 
       function buildAgentOptions(selectedId) {
         return [
-          `<option value="" ${selectedId === null || selectedId === undefined ? "selected" : ""}>Auto (Team Lead decides)</option>`,
-          ...state.agents.map(
-            (a) =>
-              `<option value="${a.id}" ${a.id === selectedId ? "selected" : ""}>${escHtml(a.name)}</option>`,
-          ),
+          `<option value="" ${selectedId === null || selectedId === undefined ? "selected" : ""}>Auto</option>`,
+          ...state.agents.map((a) => {
+            const modelLabel = "";
+            return `<option value="${a.id}" ${a.id === selectedId ? "selected" : ""}>${escHtml(a.name)}${modelLabel}</option>`;
+          }),
         ].join("");
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // MODEL CATALOG
+      // ─────────────────────────────────────────────────────────────────
+
+      async function fetchModels() {
+        try {
+          const r = await fetch(`${WATCHER_URL}/models`);
+          if (r.ok) {
+            catalogModels = await r.json();
+            renderModels();
+            // Refresh agent picker dropdowns so model labels update
+            const atAgent = document.getElementById("at-agent");
+            if (atAgent) atAgent.innerHTML = buildAgentOptions(null);
+          }
+        } catch {}
+      }
+
+      function getModelDisplayName(modelId) {
+        const m = catalogModels.find((m) => m.model_id === modelId);
+        return m ? m.display_name : modelId;
+      }
+
+      function buildModelBadge(modelId) {
+        const m = catalogModels.find((m) => m.model_id === modelId);
+        const name = m ? m.display_name : modelId;
+        const provider = m ? m.provider.toLowerCase().replace(/[^a-z]/g, "") : "";
+        return `<span class="model-badge${provider ? " provider-" + provider : ""}" title="${escAttr(name)}">${escHtml(name)}</span>`;
+      }
+
+      function renderModels() {
+        const grid = document.getElementById("models-catalog");
+        if (!grid) return;
+        if (catalogModels.length === 0) {
+          grid.innerHTML = `<p class="models-empty">No model dossiers found. Add dossiers to ~/.tasker/models/ or run /tasker-add-model to onboard a model.</p>`;
+          return;
+        }
+        grid.innerHTML = catalogModels.map(renderModelCard).join("");
+      }
+
+      function renderModelCard(m) {
+        const isUnverified = (m.quirks || []).some((q) => q.startsWith("UNVERIFIED"));
+        const needsSetup = !m.api || !m.api.endpoint || !m.api.auth;
+        const provider = m.provider ? m.provider.toLowerCase().replace(/[^a-z]/g, "") : "";
+        const tierClass = m.tier || "standard";
+        const bestFor = (m.capabilities?.best_for || [])
+          .slice(0, 3)
+          .map((s) => `<li>${escHtml(s)}</li>`)
+          .join("");
+
+        const warningBadges = [
+          isUnverified ? `<span class="badge-unverified">Unverified</span>` : "",
+          needsSetup && !m.connected ? `<span class="badge-setup-required">Setup required</span>` : "",
+        ]
+          .filter(Boolean)
+          .join("");
+
+        if (m.builtin) {
+          return `
+<div class="model-card connected" id="mc-${m.model_id}">
+  <div class="model-card-header">
+    <div>
+      <div class="model-display-name">${escHtml(m.display_name)}</div>
+      <div class="model-provider-label provider-${provider}">${escHtml(m.provider)}</div>
+    </div>
+    <span class="tier-badge ${tierClass}">${m.tier || "standard"}</span>
+  </div>
+  ${warningBadges ? `<div class="model-warning-badges">${warningBadges}</div>` : ""}
+  <ul class="model-best-for">${bestFor}</ul>
+  <div class="model-card-footer">
+    <span class="badge-connected-pill">✓ Built-in</span>
+  </div>
+</div>`;
+        }
+
+        if (m.connected) {
+          return `
+<div class="model-card connected" id="mc-${m.model_id}">
+  <div class="model-card-header">
+    <div>
+      <div class="model-display-name">${escHtml(m.display_name)}</div>
+      <div class="model-provider-label provider-${provider}">${escHtml(m.provider)}</div>
+    </div>
+    <span class="tier-badge ${tierClass}">${m.tier || "standard"}</span>
+  </div>
+  ${warningBadges ? `<div class="model-warning-badges">${warningBadges}</div>` : ""}
+  <ul class="model-best-for">${bestFor}</ul>
+  <div class="model-card-footer">
+    <span class="badge-connected-pill">✓ Connected</span>
+    <button type="button" class="btn-model-disconnect" onclick="disconnectModel('${m.model_id}')">Disconnect</button>
+  </div>
+</div>`;
+        }
+
+        return `
+<div class="model-card" id="mc-${m.model_id}">
+  <div class="model-card-header">
+    <div>
+      <div class="model-display-name">${escHtml(m.display_name)}</div>
+      <div class="model-provider-label provider-${provider}">${escHtml(m.provider)}</div>
+    </div>
+    <span class="tier-badge ${tierClass}">${m.tier || "standard"}</span>
+  </div>
+  ${warningBadges ? `<div class="model-warning-badges">${warningBadges}</div>` : ""}
+  <ul class="model-best-for">${bestFor}</ul>
+  <div class="model-card-footer">
+    <button type="button" class="btn-model-connect" onclick="openConnectPanel('${m.model_id}')">Connect</button>
+  </div>
+  <div class="connect-panel hidden" id="cp-${m.model_id}">
+    ${buildConnectPanelContent(m)}
+  </div>
+</div>`;
+      }
+
+      function buildConnectPanelContent(m) {
+        const needsEndpoint = !m.api || !m.api.endpoint;
+        const hostSelect = needsEndpoint ? `
+    <div class="form-group">
+      <label class="form-label" style="font-size:11px">Host</label>
+      <select class="form-select" id="cp-${m.model_id}-host" onchange="updateConnectEndpoint('${m.model_id}')">
+        <option value="ollama">Ollama (local)</option>
+        <option value="groq">Groq</option>
+        <option value="together">Together AI</option>
+        <option value="custom">Custom endpoint</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label" style="font-size:11px">Endpoint URL</label>
+      <input class="form-input" id="cp-${m.model_id}-endpoint" type="text" value="http://localhost:11434/v1/chat/completions" />
+    </div>` : "";
+        const keyLabel = needsEndpoint ? "API Key (optional for Ollama)" : "API Key";
+        return `${hostSelect}
+    <div class="form-group">
+      <label class="form-label" style="font-size:11px">${keyLabel}</label>
+      <input class="form-input" id="cp-${m.model_id}-key" type="password" placeholder="${needsEndpoint ? "Leave blank for local Ollama" : "Required"}" autocomplete="off" />
+    </div>
+    <div class="connect-warning">⚠ Keys are stored in plaintext in ~/.tasker/settings.json. Do not use keys with broad permissions.</div>
+    <div class="connect-panel-footer">
+      <button type="button" class="btn-secondary" style="font-size:12px;padding:4px 10px" onclick="closeConnectPanel('${m.model_id}')">Cancel</button>
+      <button type="button" class="btn-primary" style="font-size:12px;padding:4px 10px" onclick="connectModel('${m.model_id}')">Connect</button>
+    </div>`;
+      }
+
+      function updateConnectEndpoint(modelId) {
+        const host = document.getElementById(`cp-${modelId}-host`)?.value;
+        const ep = document.getElementById(`cp-${modelId}-endpoint`);
+        if (!ep) return;
+        const presets = {
+          ollama: "http://localhost:11434/v1/chat/completions",
+          groq: "https://api.groq.com/openai/v1/chat/completions",
+          together: "https://api.together.xyz/v1/chat/completions",
+          custom: "",
+        };
+        if (host !== "custom") {
+          ep.value = presets[host] || "";
+          ep.readOnly = true;
+        } else {
+          ep.value = "";
+          ep.readOnly = false;
+        }
+      }
+
+      function openConnectPanel(modelId) {
+        const panel = document.getElementById(`cp-${modelId}`);
+        if (panel) panel.classList.remove("hidden");
+      }
+
+      function closeConnectPanel(modelId) {
+        const panel = document.getElementById(`cp-${modelId}`);
+        if (panel) panel.classList.add("hidden");
+      }
+
+      async function connectModel(modelId) {
+        const apiKey = document.getElementById(`cp-${modelId}-key`)?.value.trim() || null;
+        const endpointEl = document.getElementById(`cp-${modelId}-endpoint`);
+        const hostEl = document.getElementById(`cp-${modelId}-host`);
+        const endpoint = endpointEl ? endpointEl.value.trim() || null : null;
+        const host = hostEl ? hostEl.value : null;
+        try {
+          const r = await fetch(`${WATCHER_URL}/models/connect`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ model_id: modelId, api_key: apiKey, endpoint, host }),
+          });
+          if (r.ok) {
+            await fetchModels();
+            renderAgents();
+          }
+        } catch {}
+      }
+
+      async function disconnectModel(modelId) {
+        if (!confirm(`Disconnect this model? The saved API key will be removed.`)) return;
+        try {
+          const r = await fetch(`${WATCHER_URL}/models/disconnect`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ model_id: modelId }),
+          });
+          if (r.ok) {
+            await fetchModels();
+            renderAgents();
+          }
+        } catch {}
       }
 
       function populateAgentSelect(selectId, selectedId) {
@@ -3529,6 +4067,10 @@
             const el = document.getElementById(id);
             if (el && !el.classList.contains("hidden")) closeModal(id);
           });
+          // Close any open connect panels
+          document.querySelectorAll(".connect-panel:not(.hidden)").forEach((p) =>
+            p.classList.add("hidden")
+          );
         }
       });
 
@@ -3541,6 +4083,7 @@
         loadState();
         renderBoard();
         connectWatcher();
+        fetchModels();
       })();
     </script>
   </body>

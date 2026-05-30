@@ -1,0 +1,51 @@
+{
+  "model_id": "codestral",
+  "display_name": "Codestral",
+  "provider": "Mistral",
+  "tier": "fast",
+  "api": {
+    "endpoint": "https://codestral.mistral.ai/v1/fim/completions",
+    "model_string": "codestral-latest",
+    "auth": "Bearer token (Authorization header)",
+    "format": "openai-chat"
+  },
+  "capabilities": {
+    "best_for": [
+      "code completion and fill-in-the-middle (FIM)",
+      "low-latency IDE-style code assist",
+      "code generation across many languages",
+      "boilerplate and scaffolding",
+      "quick in-file edits"
+    ],
+    "avoid": [
+      "natural-language prose",
+      "high-level reasoning or architecture",
+      "non-code tasks",
+      "complex multi-file judgment"
+    ],
+    "context_window": 256000,
+    "supports_multimodal": false,
+    "supports_tool_use": false,
+    "relative_speed": "fast",
+    "relative_cost": "low"
+  },
+  "prompting": {
+    "responds_best_to": "Precise code context — surrounding code, signatures, and the exact gap to fill. Use the FIM endpoint for completions.",
+    "avoid": "Prose instructions or open-ended design questions — it is a code-completion specialist.",
+    "system_prompt_prefix": "Output only code that fits the surrounding context; no explanation.",
+    "ideal_task_length": "brief",
+    "needs_examples": false
+  },
+  "quirks": [
+    "Supports fill-in-the-middle (FIM) — use the dedicated FIM endpoint for inline completion; the chat endpoint also works for generation",
+    "Code-only — not for prose or reasoning",
+    "Fast and cheap for high-volume code assist",
+    "No tool use — orchestrate it, don't hand it agentic loops"
+  ],
+  "handoff": {
+    "output_format_instruction": "Ask for raw code only (or a FIM completion); specify language and that prose is excluded.",
+    "evaluation_notes": "Lint/run the output; verify it didn't hallucinate APIs and that edge cases are covered."
+  },
+  "last_updated": "2026-05-30",
+  "source": "claude-opus — initial dossier"
+}

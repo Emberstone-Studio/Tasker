@@ -1,0 +1,50 @@
+{
+  "model_id": "claude-sonnet-4-6",
+  "display_name": "Claude Sonnet 4.6",
+  "provider": "Anthropic",
+  "tier": "standard",
+  "agent_model": "sonnet",
+  "api": {
+    "endpoint": "https://api.anthropic.com/v1/messages",
+    "model_string": "claude-sonnet-4-6",
+    "auth": "x-api-key header",
+    "format": "anthropic-messages"
+  },
+  "capabilities": {
+    "best_for": [
+      "everyday coding and implementation tasks",
+      "code review at scale",
+      "structured extraction and transformation",
+      "balanced reasoning-plus-speed work",
+      "reliable tool-use agents",
+      "drafting and editing prose or docs"
+    ],
+    "avoid": [
+      "the hardest novel reasoning problems",
+      "tasks where a subtle judgment call matters more than throughput"
+    ],
+    "context_window": 200000,
+    "supports_multimodal": true,
+    "supports_tool_use": true,
+    "relative_speed": "medium",
+    "relative_cost": "medium"
+  },
+  "prompting": {
+    "responds_best_to": "Concrete, well-scoped instructions with explicit acceptance criteria.",
+    "avoid": "Highly ambiguous or underspecified tasks — it may pick a reasonable but unintended interpretation.",
+    "system_prompt_prefix": null,
+    "ideal_task_length": "medium",
+    "needs_examples": false
+  },
+  "quirks": [
+    "Best price/performance for routine delegation — the default workhorse",
+    "Fast, dependable tool use",
+    "Occasionally less thorough than Opus on edge cases — name the edge cases explicitly"
+  ],
+  "handoff": {
+    "output_format_instruction": "Specify the exact format; it follows reliably.",
+    "evaluation_notes": "Spot-check edge cases and error handling; main-path logic is usually sound."
+  },
+  "last_updated": "2026-05-30",
+  "source": "claude-opus — initial dossier"
+}
