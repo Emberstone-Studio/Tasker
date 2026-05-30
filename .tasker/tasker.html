@@ -946,6 +946,58 @@
         font-family: var(--font-ui);
       }
 
+      .btn-text-sm {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 11px;
+        cursor: pointer;
+        padding: 2px 4px;
+        font-family: var(--font-ui);
+        border-radius: 3px;
+      }
+      .btn-text-sm:hover { color: var(--text-primary); }
+
+      .markdown-body {
+        font-size: 13px;
+        line-height: 1.6;
+        color: var(--text-primary);
+        font-family: var(--font-ui);
+        min-height: 40px;
+      }
+      .markdown-body p { margin: 0 0 8px; }
+      .markdown-body p:last-child { margin-bottom: 0; }
+      .markdown-body h1, .markdown-body h2, .markdown-body h3 {
+        font-weight: 600;
+        margin: 12px 0 4px;
+      }
+      .markdown-body h1 { font-size: 15px; }
+      .markdown-body h2 { font-size: 14px; }
+      .markdown-body h3 { font-size: 13px; }
+      .markdown-body ul, .markdown-body ol { margin: 0 0 8px; padding-left: 20px; }
+      .markdown-body li { margin: 2px 0; }
+      .markdown-body strong { font-weight: 600; }
+      .markdown-body em { font-style: italic; }
+      .markdown-body hr { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
+      .markdown-body code {
+        background: var(--bg-input);
+        border: 1px solid var(--border);
+        border-radius: 3px;
+        padding: 1px 4px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+      }
+      .markdown-body pre {
+        background: var(--bg-input);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 10px;
+        overflow-x: auto;
+        max-width: 100%;
+        margin: 0 0 8px;
+      }
+      .markdown-body pre code { background: none; border: none; padding: 0; }
+
       .form-textarea.mono {
         font-family: var(--font-mono);
         font-size: 12px;
@@ -1188,7 +1240,6 @@
         padding: 8px 12px;
         font-size: 12px;
         line-height: 1.5;
-        white-space: pre-wrap;
         word-break: break-word;
       }
 
@@ -1196,13 +1247,13 @@
         background: rgba(88, 101, 242, 0.12);
         border: 1px solid rgba(88, 101, 242, 0.25);
         color: var(--text-primary);
+        white-space: pre-wrap;
       }
 
       .chat-msg.agent .chat-bubble {
         background: var(--bg-subtle);
         border: 1px solid var(--border);
         color: var(--text-primary);
-        font-family: var(--font-mono);
         font-size: 11.5px;
       }
 
@@ -1542,6 +1593,7 @@
         overflow: hidden;
         display: flex;
         flex-direction: column;
+        position: relative;
         background: var(--bg-subtle);
         border-left: 1px solid transparent;
         transition:
@@ -1554,6 +1606,23 @@
         border-color: var(--border);
       }
 
+      #chat-panel-resizer {
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        width: 5px;
+        cursor: ew-resize;
+        z-index: 10;
+      }
+      #chat-panel-resizer:hover, #chat-panel-resizer.dragging {
+        background: var(--accent);
+        opacity: 0.25;
+      }
+      #chat-panel.resizing {
+        transition: none !important;
+      }
+
       #btn-chat-toggle.active {
         color: var(--text-primary);
         background: var(--bg-subtle);
@@ -1562,6 +1631,8 @@
       #chat-panel-inner {
         width: 340px;
         min-width: 340px;
+        max-width: 340px;
+        overflow-x: hidden;
         display: flex;
         flex-direction: column;
         height: 100%;
@@ -1570,6 +1641,7 @@
       #chat-panel-messages {
         flex: 1;
         overflow-y: auto;
+        overflow-x: hidden;
         padding: 16px;
         display: flex;
         flex-direction: column;
@@ -1607,6 +1679,7 @@
         align-self: flex-start;
         align-items: flex-start;
         max-width: 85%;
+        min-width: 0;
       }
 
       .chat-panel-msg.error {
@@ -1619,14 +1692,18 @@
         padding: 8px 12px;
         font-size: 13px;
         line-height: 1.5;
-        white-space: pre-wrap;
         word-break: break-word;
+        overflow: hidden;
+        min-width: 0;
+        width: 100%;
+        box-sizing: border-box;
       }
 
       .chat-panel-msg.user .chat-panel-bubble {
         background: rgba(88, 101, 242, 0.15);
         border: 1px solid rgba(88, 101, 242, 0.3);
         color: var(--text-primary);
+        white-space: pre-wrap;
       }
 
       .chat-panel-msg.assistant .chat-panel-bubble {
@@ -1666,6 +1743,7 @@
         text-align: center;
       }
     </style>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   </head>
   <body>
     <!-- ─── MAIN APP ───────────────────────────────────────── -->
@@ -1906,6 +1984,7 @@
 
         <!-- CHAT PANEL (slide-in from right) -->
         <div id="chat-panel">
+          <div id="chat-panel-resizer"></div>
           <div id="chat-panel-inner">
             <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);flex-shrink:0;">
               <span style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;">Chat</span>
@@ -2754,9 +2833,9 @@
         wrap.className = `chat-panel-msg ${role}`;
 
         const bubble = document.createElement("div");
-        bubble.className = "chat-panel-bubble";
+        bubble.className = role === "assistant" ? "chat-panel-bubble markdown-body" : "chat-panel-bubble";
         if (role === "assistant") {
-          bubble.innerHTML = _renderMarkdown(text);
+          bubble.innerHTML = parseMarkdown(text);
         } else {
           bubble.textContent = text;
         }
@@ -3088,8 +3167,12 @@
       <input class="form-input" id="td-title" type="text" value="${escAttr(task.title)}">
     </div>
     <div class="form-group">
-      <label class="form-label">Description</label>
-      <textarea class="form-textarea" id="td-desc" rows="5">${escHtml(task.description || "")}</textarea>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <label class="form-label" style="margin-bottom:0">Description</label>
+        <button type="button" class="btn-text-sm" id="td-desc-toggle" onclick="toggleDescEdit()">Edit</button>
+      </div>
+      <div id="td-desc-preview" class="markdown-body">${parseMarkdown(task.description || "")}</div>
+      <textarea class="form-textarea" id="td-desc" rows="8" style="display:none">${escHtml(task.description || "")}</textarea>
     </div>
     <div class="form-group">
       <label class="form-label">Agent</label>
@@ -3162,7 +3245,8 @@
         if (!task) return;
         task.title =
           document.getElementById("td-title").value.trim() || task.title;
-        task.description = document.getElementById("td-desc").value.trim();
+        const descEl = document.getElementById("td-desc");
+        task.description = descEl ? descEl.value.trim() : task.description;
         task.agent_id = document.getElementById("td-agent").value || null;
         if (!task.agent_id) {
           task.model = document.getElementById("td-model")?.value || null;
@@ -3242,7 +3326,7 @@
             </div>`;
             } else if (a.type === "output" || a.type === "chat_agent") {
               return `<div class="chat-msg agent">
-              <div class="chat-bubble">${escHtml(a.content)}</div>
+              <div class="chat-bubble markdown-body">${parseMarkdown(a.content)}</div>
               <span class="chat-meta">${fmtTs(a.timestamp)}</span>
             </div>`;
             } else {
@@ -3426,6 +3510,31 @@
         updateColorPresets(col);
         populateAgentModelSelect(ag ? (ag.model || "") : "");
         openModal("agent-modal");
+      }
+
+      function parseMarkdown(text) {
+        if (!text) return "";
+        if (typeof marked !== "undefined") return marked.parse(text);
+        return `<p>${escHtml(text)}</p>`;
+      }
+
+      function toggleDescEdit() {
+        const preview = document.getElementById("td-desc-preview");
+        const textarea = document.getElementById("td-desc");
+        const btn = document.getElementById("td-desc-toggle");
+        if (!preview || !textarea || !btn) return;
+        const editing = textarea.style.display !== "none";
+        if (editing) {
+          preview.innerHTML = parseMarkdown(textarea.value);
+          preview.style.display = "";
+          textarea.style.display = "none";
+          btn.textContent = "Edit";
+        } else {
+          preview.style.display = "none";
+          textarea.style.display = "";
+          textarea.focus();
+          btn.textContent = "Preview";
+        }
       }
 
       function getAgentHintText(agentId) {
@@ -4084,6 +4193,42 @@
         renderBoard();
         connectWatcher();
         fetchModels();
+
+        // Chat panel drag-to-resize
+        (function() {
+          const resizer = document.getElementById("chat-panel-resizer");
+          const panel = document.getElementById("chat-panel");
+          const inner = document.getElementById("chat-panel-inner");
+          if (!resizer || !panel || !inner) return;
+          let startX, startWidth;
+          resizer.addEventListener("mousedown", (e) => {
+            if (!panel.classList.contains("open")) return;
+            startX = e.clientX;
+            startWidth = panel.offsetWidth;
+            resizer.classList.add("dragging");
+            panel.classList.add("resizing");
+            document.body.style.cursor = "ew-resize";
+            document.body.style.userSelect = "none";
+            e.preventDefault();
+            document.addEventListener("mousemove", onMove);
+            document.addEventListener("mouseup", onUp);
+          });
+          function onMove(e) {
+            const w = Math.max(240, Math.min(700, startWidth + startX - e.clientX));
+            panel.style.width = w + "px";
+            inner.style.width = w + "px";
+            inner.style.minWidth = w + "px";
+            inner.style.maxWidth = w + "px";
+          }
+          function onUp() {
+            resizer.classList.remove("dragging");
+            panel.classList.remove("resizing");
+            document.body.style.cursor = "";
+            document.body.style.userSelect = "";
+            document.removeEventListener("mousemove", onMove);
+            document.removeEventListener("mouseup", onUp);
+          }
+        })();
       })();
     </script>
   </body>
