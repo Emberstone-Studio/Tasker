@@ -2,7 +2,7 @@
 
 Tasker turns VS Code into a command center for AI coding agents: plan work on a kanban board, dispatch tasks to agents, review the results, and keep the whole run visible inside your editor.
 
-![Tasker board](https://raw.githubusercontent.com/Emberstone-Studio/Tasker/main/tasker-screen1.png)
+![Tasker board](https://raw.githubusercontent.com/Emberstone-Studio/Tasker/main/img/tasker-screen1.png)
 
 ## What Tasker does
 
@@ -46,7 +46,7 @@ Open a folder or workspace in VS Code, then use one of these options:
 - Run **Tasker: Open Board** from the command palette.
 - Run **Tasker: Open in Browser** if you prefer the browser view.
 
-On first use in a project, Tasker creates a `.tasker/` folder to store that project's board, chats, role state, and runtime metadata.
+On first use in a workspace, Tasker creates a `.tasker/` folder for durable workspace state. Machine-local runtime state is stored separately under the user's Tasker home.
 
 ### First-run setup
 
@@ -71,15 +71,15 @@ You can also run a single task directly from its detail modal with **Run Now**.
 
 Tasker is free to install and use.
 
-- **Free** uses Tasker's selected driver for sequential execution and is limited to one active Tasker project/server PID at a time.
-- **Pro** unlocks per-role and per-task model routing, automatic fallback, peer chat, parallel runs, multiple simultaneous Tasker project instances, and broader orchestration.
+- **Free** uses Tasker's selected driver for sequential execution and is limited to one active Tasker workspace/server PID at a time.
+- **Pro** unlocks per-role and per-task model routing, automatic fallback, peer chat, parallel runs, multiple simultaneous Tasker workspace instances, and broader orchestration.
 
 ## Agents and models
 
 Tasker separates **roles**, **drivers**, and **models**:
 
 - A **role** defines what kind of agent should do the work.
-- A **driver** supplies the agent runtime, including Claude Code, Codex, Bob, Antigravity, or Local Models through OpenCode.
+- A **driver** supplies the agent runtime, including Claude Code, Codex, Antigravity, or Local Models through OpenCode.
 - A **model** is the model used through that driver.
 
 The **Agents** tab contains the Roles, Drivers, and Models sections. Driver cards handle runtime connections, while the Models catalog provides local and cloud connection options.
@@ -122,7 +122,7 @@ The chat panel is both a workspace assistant and Tasker's team lead. Use it to:
 - Review dispatch results and completion summaries.
 - Approve or deny sensitive actions such as commits, PRs, or release steps when requested.
 
-Chats are stored by Tasker with the project so project context can persist across sessions.
+Chats are stored by Tasker with the workspace so workspace context can persist across sessions.
 
 ### Voice and audio
 
@@ -136,10 +136,10 @@ Voice input and output are processed locally. Voice models and binaries may be d
 
 ## Privacy and permissions
 
-Tasker is designed around explicit project-local state and configurable execution permissions.
+Tasker is designed around explicit workspace-local state and configurable execution permissions.
 
-- Project board data is stored under `.tasker/` in your workspace.
-- Global Tasker settings and credentials are stored outside the project.
+- Board data is stored under `.tasker/` in your workspace.
+- Global Tasker settings and credentials are stored outside the workspace.
 - Agent permissions can be configured for file reads, edits, shell commands, web access, MCP tools, delegation, and integrations.
 - Voice processing runs locally unless you choose external models or services for other work.
 
@@ -154,8 +154,8 @@ Tasker contributes these VS Code commands:
 |---|---|
 | **Tasker: Open Board** | Open the Tasker board in VS Code |
 | **Tasker: Open in Browser** | Open the board in your browser |
-| **Tasker: Start Server** | Start the Tasker project server |
-| **Tasker: Stop Server** | Stop the Tasker project server |
+| **Tasker: Start Server** | Start the Tasker server in the current workspace |
+| **Tasker: Stop Server** | Stop the Tasker server in the current workspace |
 
 Some supported CLI drivers may also expose Tasker shortcuts such as `/tasker`, `/tasker-queue`, and `/tasker-run`.
 
@@ -163,16 +163,17 @@ Some supported CLI drivers may also expose Tasker shortcuts such as `/tasker`, `
 
 | Location | Purpose |
 |---|---|
-| `.tasker/chats/` | Tasker chat sessions for the project |
-| `.tasker/models/` | Project model overrides and user-onboarded model dossiers |
-| `.tasker/roles/` | Project role definitions, memory, and run state |
-| `.tasker/runtime/` | Runtime state such as agent PIDs and session maps |
-| `.tasker/tasks/` | Project task state, attachments, and active task files |
+| `.tasker/chats/` | Tasker chat sessions for the workspace |
+| `.tasker/roles/` | Workspace role definitions and memory |
+| `.tasker/tasks/` | Workspace task state, attachments, and active task files |
+| `~/.tasker/models/` | User-global connected and probed model dossiers |
+| `~/.tasker/workspaces/<workspace-hash>/runtime/` | Workspace-scoped runtime state such as agent PIDs and session maps |
+| `~/.tasker/workspaces/<workspace-hash>/role-runs/` | Workspace-scoped agent transcripts and run artifacts |
 | `~/.tasker/settings.json` | Global Tasker settings, including permission policy |
 | `~/.tasker/whisper/` | Downloaded local voice transcription assets |
 | `~/.tasker/piper/` | Downloaded local text-to-speech assets |
 
-The project `.tasker/` folder is plaintext so it can be inspected, backed up, or committed intentionally with your repository.
+The workspace `.tasker/` folder is plaintext so it can be inspected, backed up, or committed intentionally with your repository. **Commit Tasker to Git** is enabled by default and allows this durable workspace state to be tracked; it does not create Git commits automatically. Machine-local runtime and run-transcript paths are always ignored. Turning the setting off ignores the entire workspace `.tasker/` folder. Runtime directories from older releases are verified, migrated into the workspace-scoped user location, and removed during initialization.
 
 ---
 
