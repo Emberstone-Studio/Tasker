@@ -177,6 +177,4 @@ The workspace `.tasker/` folder is plaintext so it can be inspected, backed up, 
 
 ---
 
-See [`vscode-extension/CHANGELOG.md`](vscode-extension/CHANGELOG.md) for release history.
-
 *Patent Pending — US Application 64/076,775 · © 2026 [Emberstone Studio](https://emberstone-studio.com/)*
