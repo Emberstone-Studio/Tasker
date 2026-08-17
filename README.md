@@ -2,7 +2,7 @@
 
 Tasker turns VS Code into a command center for AI coding agents: plan work on a kanban board, dispatch tasks to agents, review the results, and keep the whole run visible inside your editor.
 
-![Tasker board](tasker-screen1.png)
+![Tasker board](img/tasker-screen1.png)
 
 ## What Tasker does
 
