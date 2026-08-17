@@ -9,7 +9,7 @@ Tasker turns VS Code into a command center for AI coding agents: plan work on a 
 - **Kanban task board** — organize work as Backlog, Ready, In Progress, In Review, and Done.
 - **Agent dispatch** — send ready tasks to AI coding agents from the board or chat panel.
 - **Run Queue** — choose which tasks to run, order them, and dispatch sequentially or in parallel when available.
-- **Roles** — use built-in Researcher, Coder, Reviewer, Writer, and Tasker roles, or create your own.
+- **Roles** — use built-in Researcher, Coder, Designer, Reviewer, Writer, and Tasker roles, or create your own.
 - **Pipelines** — run a task through multiple roles in order, such as Researcher → Coder → Reviewer.
 - **Live progress** — see agent activity, current step, status changes, questions, and final output on each card.
 - **Review loop** — accept completed work by moving it to Done, or comment and send it back to Ready.
@@ -48,6 +48,10 @@ Open a folder or workspace in VS Code, then use one of these options:
 
 On first use in a workspace, Tasker creates a `.tasker/` folder for durable workspace state. Machine-local runtime state is stored separately under the user's Tasker home.
 
+The status bar icon also opens a quick menu with attention items, shortcuts to ask Tasker a question, and server controls.
+
+![Tasker status bar menu](img/tasker-screen6.png)
+
 ### First-run setup
 
 When no driver is connected, Tasker opens a short setup wizard to connect drivers and review Role assignments. The first connected driver's default model is assigned to every Role once; later connections never overwrite those choices. If setup is skipped, chat and task runs show a setup warning until a driver is connected. Changing Tasker's assigned model requires a server restart.
@@ -63,6 +67,8 @@ When no driver is connected, Tasker opens a short setup wizard to connect driver
 7. Move accepted work to **Done**, or comment and move it back to **Ready**.
 
 You can also run a single task directly from its detail modal with **Run Now**.
+
+![Live agent activity view](img/tasker-screen3.png)
 
 > **Tip:**
 > For larger changes, start in the chat panel before creating cards manually. Tell Tasker what you want to accomplish and ask it to break the work into tasks with dependencies and a proposed run plan. Review the plan, adjust anything that looks wrong, then dispatch the queue.
@@ -83,6 +89,8 @@ Tasker separates **roles**, **drivers**, and **models**:
 - A **model** is the model used through that driver.
 
 The **Agents** tab contains the Roles, Drivers, and Models sections. Driver cards handle runtime connections, while the Models catalog provides local and cloud connection options.
+
+![Agents tab](img/tasker-screen4.png)
 
 ### Local Models with OpenCode
 
@@ -122,7 +130,9 @@ The chat panel is both a workspace assistant and Tasker's team lead. Use it to:
 - Review dispatch results and completion summaries.
 - Approve or deny sensitive actions such as commits, PRs, or release steps when requested.
 
-Chats are stored by Tasker with the workspace so workspace context can persist across sessions.
+Chats are stored by Tasker with the workspace so workspace context can persist across sessions. Switch which role you're talking to directly from the chat panel.
+
+![Switching roles in the chat panel](img/tasker-screen7.png)
 
 ### Voice and audio
 
@@ -133,6 +143,12 @@ Tasker includes optional on-device voice features:
 - Optional hardware acceleration when supported.
 
 Voice input and output are processed locally. Voice models and binaries may be downloaded on demand.
+
+## Performance
+
+The **Performance** tab tracks agent throughput and outcomes over time, so you can see how dispatch volume, completion rates, and role/model usage trend as you run more tasks.
+
+![Performance tab](img/tasker-screen5.png)
 
 ## Privacy and permissions
 
@@ -176,5 +192,7 @@ Some supported CLI drivers may also expose Tasker shortcuts such as `/tasker`, `
 The workspace `.tasker/` folder is plaintext so it can be inspected, backed up, or committed intentionally with your repository. **Commit Tasker to Git** is enabled by default and allows this durable workspace state to be tracked; it does not create Git commits automatically. Machine-local runtime and run-transcript paths are always ignored. Turning the setting off ignores the entire workspace `.tasker/` folder. Runtime directories from older releases are verified, migrated into the workspace-scoped user location, and removed during initialization.
 
 ---
+
+See [`vscode-extension/CHANGELOG.md`](vscode-extension/CHANGELOG.md) for release history.
 
 *Patent Pending — US Application 64/076,775 · © 2026 [Emberstone Studio](https://emberstone-studio.com/)*
