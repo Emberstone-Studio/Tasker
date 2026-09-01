@@ -85,7 +85,7 @@ Tasker is free to install and use.
 Tasker separates **roles**, **drivers**, and **models**:
 
 - A **role** defines what kind of agent should do the work.
-- A **driver** supplies the agent runtime, including Claude Code, Codex, Antigravity, or Local Models through OpenCode.
+- A **driver** supplies the agent runtime, including Claude Code, Codex, Antigravity, GitHub Copilot, or Local Models through OpenCode.
 - A **model** is the model used through that driver.
 
 The **Agents** tab contains the Roles, Drivers, and Models sections. Driver cards handle runtime connections, while the Models catalog provides local and cloud connection options.
